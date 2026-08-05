@@ -1,0 +1,92 @@
+/* ==========================================
+   ECHO LOADER
+========================================== */
+
+#loader{
+
+    position:fixed;
+    inset:0;
+
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+
+    background:#050505;
+
+    z-index:9999;
+
+    transition:opacity 1.2s ease, visibility 1.2s ease;
+
+}
+
+.logo{
+
+    font-family:"Inter",sans-serif;
+
+    font-size:96px;
+
+    font-weight:200;
+
+    letter-spacing:22px;
+
+    color:#ffffff;
+
+    animation:logoFloat 3s ease-in-out infinite;
+
+    margin-bottom:40px;
+
+}
+
+.progress{
+
+    width:420px;
+
+    height:4px;
+
+    background:#1a1a1a;
+
+    border-radius:100px;
+
+    overflow:hidden;
+
+}
+
+.bar{
+
+    width:0%;
+
+    height:100%;
+
+    background:linear-gradient(
+        90deg,
+        #ffffff,
+        #d7d7d7,
+        #ffffff
+    );
+
+    animation:loading 6s linear forwards;
+
+}
+
+#status{
+
+    margin-top:18px;
+
+    font-size:13px;
+
+    font-weight:300;
+
+    letter-spacing:4px;
+
+    color:#9f9f9f;
+
+}
+
+.loaderHide{
+
+    opacity:0;
+
+    visibility:hidden;
+
+}

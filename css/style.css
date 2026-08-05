@@ -1,0 +1,222 @@
+/* ==========================================
+   ECHO
+   GLOBAL STYLES
+========================================== */
+
+*,
+*::before,
+*::after{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+:root{
+
+    --background:#050505;
+    --surface:#101010;
+    --surface-light:#1a1a1a;
+
+    --border:#252525;
+
+    --white:#ffffff;
+    --text:#d8d8d8;
+    --muted:#8b8b8b;
+
+    --shadow:0 30px 80px rgba(0,0,0,.45);
+
+    --transition:.35s ease;
+
+}
+
+html{
+
+    scroll-behavior:smooth;
+
+}
+
+body{
+
+    width:100vw;
+    height:100vh;
+
+    overflow:hidden;
+
+    background:var(--background);
+
+    color:var(--white);
+
+    font-family:"Inter",sans-serif;
+
+    user-select:none;
+
+    -webkit-font-smoothing:antialiased;
+
+}
+
+img{
+
+    max-width:100%;
+    display:block;
+
+}
+
+button,
+input,
+textarea{
+
+    font:inherit;
+
+}
+
+button{
+
+    border:none;
+    background:none;
+
+}
+
+.hidden{
+
+    display:none !important;
+
+}
+
+#room{
+
+    position:fixed;
+
+    inset:0;
+
+    overflow:hidden;
+
+}
+
+/* =============================
+    BACKGROUND
+============================= */
+
+.gradient{
+
+    position:absolute;
+
+    inset:0;
+
+    background:
+
+    radial-gradient(circle at top,#191919,#050505 65%);
+
+}
+
+/* =============================
+      GLASS
+============================= */
+
+.glass{
+
+    position:absolute;
+
+    inset:0;
+
+    backdrop-filter:blur(14px);
+
+    opacity:.15;
+
+}
+
+/* =============================
+    CURSOR GLOW
+============================= */
+
+.cursorGlow{
+
+    position:absolute;
+
+    width:350px;
+    height:350px;
+
+    border-radius:50%;
+
+    pointer-events:none;
+
+    background:
+
+    radial-gradient(circle,
+    rgba(255,255,255,.12),
+    transparent 70%);
+
+    transform:translate(-50%,-50%);
+
+    transition:
+
+    transform .08s linear;
+
+    filter:blur(18px);
+
+}
+
+/* =============================
+    SUBTITLE
+============================= */
+
+.subtitle{
+
+    position:absolute;
+
+    bottom:55px;
+
+    width:100%;
+
+    text-align:center;
+
+}
+
+.subtitle p{
+
+    color:rgba(255,255,255,.72);
+
+    letter-spacing:5px;
+
+    font-size:15px;
+
+    font-weight:300;
+
+}
+
+/* =============================
+    NOISE
+============================= */
+
+.noise{
+
+    position:absolute;
+
+    inset:0;
+
+    opacity:.03;
+
+    pointer-events:none;
+
+    background-image:
+
+    radial-gradient(#fff 1px,transparent 1px);
+
+    background-size:4px 4px;
+
+}
+
+/* =============================
+    FADE
+============================= */
+
+.fadeOut{
+
+    animation:fadeOut 1.5s forwards;
+
+}
+
+.fadeIn{
+
+    animation:fadeIn 1.5s forwards;
+
+}

@@ -1,0 +1,154 @@
+/* ==========================================
+   ECHO ROOM
+========================================== */
+
+#room{
+    position:fixed;
+    inset:0;
+    overflow:hidden;
+    background:#050505;
+}
+
+/* Background */
+
+.gradient{
+    position:absolute;
+    inset:0;
+    background:
+    radial-gradient(circle at top,#1b1b1b,#050505 70%);
+}
+
+/* Noise */
+
+.noise{
+    position:absolute;
+    inset:0;
+    opacity:.03;
+    background-image:radial-gradient(#fff 1px,transparent 1px);
+    background-size:4px 4px;
+}
+
+/* Cursor Glow */
+
+.cursorGlow{
+    position:absolute;
+    width:400px;
+    height:400px;
+    border-radius:50%;
+    pointer-events:none;
+    transform:translate(-50%,-50%);
+    background:radial-gradient(circle,
+    rgba(255,255,255,.08),
+    transparent 70%);
+    filter:blur(20px);
+}
+
+/* Window */
+
+.window{
+
+    position:absolute;
+
+    width:300px;
+    height:340px;
+
+    left:50%;
+    top:70px;
+
+    transform:translateX(-50%);
+
+    border-radius:20px;
+
+    overflow:hidden;
+
+    background:rgba(255,255,255,.03);
+
+    border:1px solid rgba(255,255,255,.05);
+
+    backdrop-filter:blur(10px);
+
+}
+
+/* Rain */
+
+.rain{
+
+    position:absolute;
+
+    inset:0;
+
+    overflow:hidden;
+
+}
+
+.drop{
+
+    position:absolute;
+
+    width:2px;
+
+    height:25px;
+
+    background:
+
+    linear-gradient(
+
+    transparent,
+
+    rgba(255,255,255,.75)
+
+    );
+
+    opacity:.5;
+
+    animation:rainFall linear infinite;
+
+}
+
+/* Core */
+
+.echoCore{
+
+    position:absolute;
+
+    width:140px;
+    height:140px;
+
+    left:50%;
+    top:120px;
+
+    transform:translateX(-50%);
+
+    border-radius:50%;
+
+    background:white;
+
+    box-shadow:
+
+    0 0 40px white,
+
+    0 0 120px rgba(255,255,255,.45);
+
+}
+
+/* Subtitle */
+
+.subtitle{
+
+    position:absolute;
+
+    width:100%;
+
+    bottom:50px;
+
+    text-align:center;
+
+}
+
+.subtitle p{
+
+    color:#d5d5d5;
+
+    letter-spacing:5px;
+
+}
