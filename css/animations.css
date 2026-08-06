@@ -116,3 +116,69 @@ translateY(380px);
 }
 
 }
+/* ==========================================
+   ATMOSPHERE
+========================================== */
+
+@keyframes fogMove{
+
+0%{
+
+transform:translateX(-3%) scale(1);
+
+}
+
+50%{
+
+transform:translateX(3%) scale(1.08);
+
+}
+
+100%{
+
+transform:translateX(-3%) scale(1);
+
+}
+
+}
+
+@keyframes particleFloat{
+
+from{
+
+transform:
+
+translateY(100vh);
+
+opacity:0;
+
+}
+
+20%{
+
+opacity:.18;
+
+}
+
+to{
+
+transform:
+
+translateY(-100px);
+
+opacity:0;
+
+}
+
+}
+@keyframes floatAvatar{
+
+    0%,100%{
+        transform:translateY(0px);
+    }
+
+    50%{
+        transform:translateY(-10px);
+    }
+
+}
