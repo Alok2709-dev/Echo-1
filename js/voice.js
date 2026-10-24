@@ -192,6 +192,13 @@ class EchoVoiceEngine {
         };
 
         this.recognition.onerror = (event) => {
+            console.warn("[EchoVoice] Speech recognition error:", event.error);
+            if (event.error === "network") {
+                const dialogueText = document.getElementById("dialogueText");
+                if (dialogueText) {
+                    dialogueText.textContent = "Voice speech recognition active in Browser mode. Launch open-browser.bat in Chrome/Edge for instant Google Neural Speech, or type in the bar!";
+                }
+            }
             if (event.error !== "not-allowed" && event.error !== "aborted") {
                 this.scheduleRestart();
             }

@@ -409,6 +409,89 @@ Example: "[happy] It's great to see you again, Alok. All neural subroutines are 
         }
 
         // ----------------------------------------------------
+        // 5B. REAL WINDOWS FILE & FOLDER CREATION & AUTOMATION
+        // ----------------------------------------------------
+        // Create file: "create file test.txt in downloads with content hello" or "create file notes.txt in desktop"
+        const createFileMatch = input.match(/(?:create|make)\s+(?:a\s+)?file\s+(?:called\s+|named\s+)?([^\s]+)(?:\s+in\s+([^\s]+))?(?:\s+with\s+(?:content|text)\s+(.*))?/i);
+        if (createFileMatch && window.echoOSBridge) {
+            const fileName = createFileMatch[1];
+            const folder = createFileMatch[2] ? createFileMatch[2].toLowerCase() : "desktop";
+            const content = createFileMatch[3] || "";
+            const targetPath = `${folder}/${fileName}`;
+            const res = await window.echoOSBridge.createFile(targetPath, content);
+            return {
+                emotion: res.success ? "happy" : "alert",
+                text: res.message || res.error
+            };
+        }
+
+        // Create folder: "create folder project in downloads" or "create folder myfolder on desktop"
+        const createFolderMatch = input.match(/(?:create|make)\s+(?:a\s+)?folder\s+(?:called\s+|named\s+)?([^\s]+)(?:\s+(?:in|on)\s+([^\s]+))?/i);
+        if (createFolderMatch && window.echoOSBridge) {
+            const folderName = createFolderMatch[1];
+            const parent = createFolderMatch[2] ? createFolderMatch[2].toLowerCase() : "desktop";
+            const targetPath = `${parent}/${folderName}`;
+            const res = await window.echoOSBridge.createFolder(targetPath);
+            return {
+                emotion: res.success ? "happy" : "alert",
+                text: res.message || res.error
+            };
+        }
+
+        // List files: "list files on desktop" or "show files in downloads"
+        const listMatch = lower.match(/(?:list|show)\s+files\s+(?:in|on)\s+([^\s]+)/i);
+        if (listMatch && window.echoOSBridge) {
+            const folder = listMatch[1];
+            const res = await window.echoOSBridge.listFiles(folder);
+            if (res.success && res.files) {
+                const preview = res.files.slice(0, 8).join(", ");
+                return {
+                    emotion: "happy",
+                    text: `Files in ${folder}: ${preview}. Total ${res.files.length} items found.`
+                };
+            }
+            return { emotion: "thinking", text: res.error || `Could not read files in ${folder}.` };
+        }
+
+        // Read file: "read file notes.txt"
+        const readMatch = lower.match(/read\s+file\s+([^\s]+)/i);
+        if (readMatch && window.echoOSBridge) {
+            const fileName = readMatch[1];
+            const res = await window.echoOSBridge.readFile(fileName);
+            if (res.success) {
+                return {
+                    emotion: "speaking",
+                    text: `Content of ${fileName}: "${res.content.substring(0, 180)}..."`
+                };
+            }
+            return { emotion: "alert", text: res.error || `Unable to read file ${fileName}.` };
+        }
+
+        // Run terminal / powershell command: "run command [cmd]" or "terminal [cmd]"
+        const cmdMatch = input.match(/(?:run command|execute command|terminal)\s+(.*)/i);
+        if (cmdMatch && window.echoOSBridge) {
+            const cmd = cmdMatch[1];
+            const res = await window.echoOSBridge.runCommand(cmd);
+            return {
+                emotion: res.success ? "happy" : "alert",
+                text: res.success ? `Command executed. Output: ${res.output}` : `Error: ${res.error}`
+            };
+        }
+
+        // Take a quick note
+        const noteMatch = input.match(/(?:take a note|save note|note down)\s*[:]\s*(.*)/i) || input.match(/(?:take a note|note down)\s+(.*)/i);
+        if (noteMatch && window.echoOSBridge) {
+            const noteText = noteMatch[1];
+            const dateStr = new Date().toLocaleDateString();
+            const timeStr = new Date().toLocaleTimeString();
+            const res = await window.echoOSBridge.createFile("desktop/Echo_Notes.txt", `[${dateStr} ${timeStr}] ${noteText}\n`);
+            return {
+                emotion: "happy",
+                text: `Note saved to Echo_Notes.txt on your Desktop: "${noteText}".`
+            };
+        }
+
+        // ----------------------------------------------------
         // 6. CONTROL CENTER & WEATHER
         // ----------------------------------------------------
         if (lower.includes("open dashboard") || lower.includes("show dashboard") || lower.includes("control center") || lower.includes("show panel")) {

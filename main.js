@@ -1,7 +1,12 @@
-const { app, BrowserWindow, globalShortcut, ipcMain, Tray, Menu, screen } = require('electron');
+const { app, BrowserWindow, globalShortcut, ipcMain, Tray, Menu, screen, clipboard } = require('electron');
 const path = require('path');
 const { exec } = require('child_process');
 const fs = require('fs');
+
+// Enable Speech and Audio permissions for Electron
+app.commandLine.appendSwitch('enable-speech-dispatcher');
+app.commandLine.appendSwitch('use-fake-ui-for-media-stream');
+app.commandLine.appendSwitch('enable-features', 'SpeechRecognition,MediaStreamTrack');
 
 let mainWindow = null;
 let tray = null;
@@ -31,6 +36,12 @@ function createWindow() {
             sandbox: false
         }
     });
+
+    // Grant all media and microphone permissions automatically
+    mainWindow.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
+        callback(true);
+    });
+    mainWindow.webContents.session.setPermissionCheckHandler(() => true);
 
     mainWindow.loadFile('index.html');
 
@@ -182,6 +193,94 @@ ipcMain.handle('app:set-startup', (event, enabled) => {
 
 ipcMain.handle('app:get-startup', () => {
     return app.getLoginItemSettings().openAtLogin;
+});
+
+// Real Windows File System & Directory Operations
+ipcMain.handle('fs:create-file', async (event, { filePath, content }) => {
+    try {
+        let resolved = filePath.trim();
+        // Resolve common user locations
+        if (resolved.toLowerCase().startsWith('desktop\\') || resolved.toLowerCase().startsWith('desktop/')) {
+            resolved = path.join(app.getPath('desktop'), resolved.substring(8));
+        } else if (resolved.toLowerCase().startsWith('downloads\\') || resolved.toLowerCase().startsWith('downloads/')) {
+            resolved = path.join(app.getPath('downloads'), resolved.substring(10));
+        } else if (resolved.toLowerCase().startsWith('documents\\') || resolved.toLowerCase().startsWith('documents/')) {
+            resolved = path.join(app.getPath('documents'), resolved.substring(10));
+        } else if (!path.isAbsolute(resolved)) {
+            resolved = path.join(app.getPath('desktop'), resolved);
+        }
+
+        const parentDir = path.dirname(resolved);
+        if (!fs.existsSync(parentDir)) {
+            fs.mkdirSync(parentDir, { recursive: true });
+        }
+
+        fs.writeFileSync(resolved, content || '', 'utf8');
+        return { success: true, path: resolved, message: `File created successfully at ${resolved}` };
+    } catch (e) {
+        return { success: false, error: e.message };
+    }
+});
+
+ipcMain.handle('fs:create-folder', async (event, { folderPath }) => {
+    try {
+        let resolved = folderPath.trim();
+        if (resolved.toLowerCase().startsWith('desktop\\') || resolved.toLowerCase().startsWith('desktop/')) {
+            resolved = path.join(app.getPath('desktop'), resolved.substring(8));
+        } else if (resolved.toLowerCase().startsWith('downloads\\') || resolved.toLowerCase().startsWith('downloads/')) {
+            resolved = path.join(app.getPath('downloads'), resolved.substring(10));
+        } else if (resolved.toLowerCase().startsWith('documents\\') || resolved.toLowerCase().startsWith('documents/')) {
+            resolved = path.join(app.getPath('documents'), resolved.substring(10));
+        } else if (!path.isAbsolute(resolved)) {
+            resolved = path.join(app.getPath('desktop'), resolved);
+        }
+
+        fs.mkdirSync(resolved, { recursive: true });
+        return { success: true, path: resolved, message: `Folder created successfully at ${resolved}` };
+    } catch (e) {
+        return { success: false, error: e.message };
+    }
+});
+
+ipcMain.handle('fs:read-file', async (event, { filePath }) => {
+    try {
+        let resolved = filePath.trim();
+        if (!path.isAbsolute(resolved)) resolved = path.join(app.getPath('desktop'), resolved);
+        const data = fs.readFileSync(resolved, 'utf8');
+        return { success: true, content: data, path: resolved };
+    } catch (e) {
+        return { success: false, error: e.message };
+    }
+});
+
+ipcMain.handle('fs:list-files', async (event, { folderPath }) => {
+    try {
+        let resolved = folderPath ? folderPath.trim() : 'desktop';
+        if (resolved.toLowerCase() === 'desktop') resolved = app.getPath('desktop');
+        else if (resolved.toLowerCase() === 'downloads') resolved = app.getPath('downloads');
+        else if (resolved.toLowerCase() === 'documents') resolved = app.getPath('documents');
+
+        const files = fs.readdirSync(resolved);
+        return { success: true, files: files.slice(0, 25), path: resolved };
+    } catch (e) {
+        return { success: false, error: e.message };
+    }
+});
+
+// Terminal / PowerShell Command Runner
+ipcMain.handle('os:run-cmd', async (event, { command }) => {
+    return new Promise((resolve) => {
+        exec(command, { timeout: 15000 }, (err, stdout, stderr) => {
+            if (err) resolve({ success: false, error: stderr || err.message });
+            else resolve({ success: true, output: (stdout || 'Command completed successfully.').trim() });
+        });
+    });
+});
+
+// Clipboard Handler
+ipcMain.handle('os:clipboard', (event, text) => {
+    clipboard.writeText(text);
+    return { success: true, message: `Copied to clipboard: "${text}"` };
 });
 
 // Screen Vision / Capture IPC
@@ -401,7 +500,7 @@ ipcMain.handle('os:execute', async (event, { command, args }) => {
             return;
         }
 
-        // 8. Universal App Launcher fallback (Attempts to launch any application requested)
+        // 8. Universal App Launcher fallback
         exec(`start "" "${command}"`, (err) => {
             if (err) {
                 resolve({ success: false, error: `Could not launch "${command}". Make sure the application is installed.` });

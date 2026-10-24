@@ -53,6 +53,52 @@ class EchoOSBridge {
         };
     }
 
+    async createFile(filePath, content = "") {
+        if (this.isNative && window.electronAPI.createFile) {
+            return await window.electronAPI.createFile(filePath, content);
+        }
+        return { success: false, error: "File creation requires Native Desktop Mode (run-echo.bat)." };
+    }
+
+    async createFolder(folderPath) {
+        if (this.isNative && window.electronAPI.createFolder) {
+            return await window.electronAPI.createFolder(folderPath);
+        }
+        return { success: false, error: "Folder creation requires Native Desktop Mode (run-echo.bat)." };
+    }
+
+    async readFile(filePath) {
+        if (this.isNative && window.electronAPI.readFile) {
+            return await window.electronAPI.readFile(filePath);
+        }
+        return { success: false, error: "Reading files requires Native Desktop Mode (run-echo.bat)." };
+    }
+
+    async listFiles(folderPath = "desktop") {
+        if (this.isNative && window.electronAPI.listFiles) {
+            return await window.electronAPI.listFiles(folderPath);
+        }
+        return { success: false, error: "Listing files requires Native Desktop Mode (run-echo.bat)." };
+    }
+
+    async runCommand(command) {
+        if (this.isNative && window.electronAPI.runCmd) {
+            return await window.electronAPI.runCmd(command);
+        }
+        return { success: false, error: "Running shell commands requires Native Desktop Mode (run-echo.bat)." };
+    }
+
+    async copyToClipboard(text) {
+        if (this.isNative && window.electronAPI.setClipboard) {
+            return await window.electronAPI.setClipboard(text);
+        }
+        if (navigator.clipboard) {
+            await navigator.clipboard.writeText(text);
+            return { success: true, message: `Copied to clipboard: "${text}"` };
+        }
+        return { success: false, error: "Clipboard access not supported." };
+    }
+
     async openApp(appName) {
         return await this.execute(appName);
     }

@@ -12,5 +12,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     setStartup: (enabled) => ipcRenderer.invoke('app:set-startup', enabled),
     getStartup: () => ipcRenderer.invoke('app:get-startup'),
     executeOS: (command, args) => ipcRenderer.invoke('os:execute', { command, args }),
+    createFile: (filePath, content) => ipcRenderer.invoke('fs:create-file', { filePath, content }),
+    createFolder: (folderPath) => ipcRenderer.invoke('fs:create-folder', { folderPath }),
+    readFile: (filePath) => ipcRenderer.invoke('fs:read-file', { filePath }),
+    listFiles: (folderPath) => ipcRenderer.invoke('fs:list-files', { folderPath }),
+    runCmd: (command) => ipcRenderer.invoke('os:run-cmd', { command }),
+    setClipboard: (text) => ipcRenderer.invoke('os:clipboard', text),
     onModeChanged: (callback) => ipcRenderer.on('mode:changed', (event, mode) => callback(mode))
 });
