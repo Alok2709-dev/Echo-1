@@ -1,57 +1,79 @@
-# ECHO v2.5 — Sentient AI Companion
+# ECHO v2.6 — Sentient AI Companion & Native Windows Assistant
 
-An advanced, atmospheric, emotionally-sentient AI companion interface featuring an organic living fluid orb, audio reactive waveforms, ambient music deck, live control center (weather, calendar, tasks), proactive JARVIS behavior, and neural voice.
-
----
-
-## 🌟 Complete Feature Matrix
-
-### 1. 🌊 Fluid Living Orb (Apple Intelligence Inspired)
-- **Organic Parametric Plasma**: Multi-layer breathing plasma core with harmonic wave deform.
-- **Stardust Light Motes**: 90+ particles orbiting with dynamic physics, drawn toward mouse cursor.
-- **Apple Aurora Screen Glow**: Shimmering iridescent screen edge illumination active during speech, listening, and alerts.
-- **Dynamic Emotion States**:
-  - 💠 **Serene**: Electric Cyan (`#00e5ff`)
-  - 🌊 **Listening**: Fluorescent Teal (`#00ffcc`)
-  - 🔮 **Thinking**: Deep Amethyst Violet (`#a855f7`)
-  - ⚡ **Speaking**: Solar Amber & Coral (`#ffab40`)
-  - 🌿 **Euphoria / Joy**: Neon Emerald (`#10b981`)
-  - 🚨 **Alert**: Supernova Crimson (`#ef4444`)
-
-### 2. 🎵 Ambient Music & Soundscape Deck
-- **Zero-Dependency Procedural Audio**: Generates high-quality soundscapes directly via the Web Audio API without downloading external audio files.
-  - *Cyberpunk Rainscape* (Atmospheric rain + sub-bass warm pad)
-  - *Cosmic Neural Drone* (Dual-frequency binaural focus drone)
-  - *Starlight Synthesizer* (Lofi chill ambient chords)
-- **Voice Commands**: *"Play music"*, *"Play rain"*, *"Next track"*, *"Pause music"*.
-- Floating Apple Music-style glass capsule in the bottom-left corner with rotating vinyl disc and live waveform ripple.
-
-### 3. 📊 Control Center Slide-out Dashboard
-- **Live Telemetry Weather**: Real-time temperature, condition, humidity, and wind speed (powered by Open-Meteo, zero setup/API key required).
-- **Daily Agenda & Calendar**: Visual schedule timeline. Add events via voice (*"Schedule meeting at 3 PM team sync"*).
-- **Neural Task Matrix**: Check off tasks with smooth haptic feedback, or add tasks via voice (*"Add task finish UI"*).
-
-### 4. 🧠 Proactive JARVIS Engine
-- **Time-Aware Conversational Greetings**: Morning, afternoon, evening, and late-night contextual intelligence.
-- **Autonomous Wellness & Focus**: Checks in gently after uninterrupted sessions, suggesting ambient soundscapes or posture breaks.
-- **Living Idle Breathing**: Subtly shifts energy and hue when idle to feel alive.
-
-### 5. 🎙️ Neural Voice & Speech
-- **Microphone Hearing**: Click the mic or press **Spacebar** to speak.
-- **Synthesized Voice**: Dynamic pitch/speed inflection based on emotion.
-- **Optional ElevenLabs Neural Voice**: Enter an ElevenLabs API key in **Settings** for cinema-grade human voices (Rachel, Domi, Bella, Antoni).
-- **Optional Google Gemini API**: Enter a Gemini key in **Settings** for deep multi-turn generative conversation.
+An advanced, atmospheric, emotionally-sentient AI companion interface featuring real-time **Vision & Facial Telemetry**, **Native Windows Desktop Automation**, **Ultra-Human Speech Synthesis**, an organic living fluid orb, ambient procedural music deck, live control center (weather, calendar, tasks), and proactive JARVIS intelligence.
 
 ---
 
-## ⌨️ Quick Controls & Shortcuts
+## 🌟 What's New in v2.6
+
+### 1. 👁️ Optical Vision & Facial Telemetry Matrix (`js/vision.js`)
+- **Real-time Facial Scanning**: Instant webcam feed with futuristic HUD scan reticle and laser sweep.
+- **Mood & Emotion Telemetry**: Detects facial cues, smile curvature, eye dynamics, and fatigue:
+  - `happy`: Vibrant smile frequency and enthusiasm
+  - `focused`: Concentrated, sharp posture
+  - `tired`: Fatigue detection with proactive break advice
+- **Zero-Dependency Offline Computer Vision**: Runs directly on HTML5 Canvas with chromatic YCbCr color model analysis without external heavy model downloads.
+- **Interactive Voice Queries**:
+  - *"How do I look?"*
+  - *"Check my face / expression"*
+  - *"Turn on camera"* / *"Close camera"*
+
+### 2. 🖥️ Native Windows Desktop Assistant (`main.js` + `preload.js`)
+- **Global Hotkey Trigger**: Press **`Alt + Space`** anywhere in Windows to summon or hide Echo instantly.
+- **Frameless Glass Window**: Apple macOS/iOS style floating glassmorphism with subtle drop shadows.
+- **System Window Controls**: Integrated Minimize, Maximize, and Close actions.
+- **Quick Desktop Launch**:
+  ```bash
+  npm start
+  ```
+
+### 3. ⚙️ Real OS Automation Bridge (`js/osBridge.js`)
+Echo can directly control Windows apps and hardware via secure IPC and PowerShell:
+- **App Launcher**:
+  - *"Open Visual Studio Code"* (or *"Open VS Code"*)
+  - *"Open File Explorer"* (or *"Open files"*)
+  - *"Launch Notepad"*
+  - *"Open Calculator"*
+  - *"Open Terminal"* (or *"Open PowerShell"*)
+  - *"Launch Chrome"* / *"Open Spotify"*
+- **Hardware & System Control**:
+  - *"Take a screenshot"* (automatically saved to your Windows Pictures folder)
+  - *"Set volume to 50"* / *"Mute volume"* / *"Unmute"*
+  - *"System status"* (reports active RAM and CPU load)
+  - *"Lock computer"* (instantly secures workstation)
+
+### 4. 🎙️ Ultra-Human Voice Engine (`js/voice.js`)
+- **Natural Conversational Cadence**: Splits sentences into micro-thought clauses with subtle 80ms human breathing pauses instead of continuous robotic monotone delivery.
+- **Neural Voice Auto-Selection**: Automatically prioritizes modern neural system voices (Microsoft Jenny, Aria, Guy, Google US English).
+- **Live Interim Hearing**: Displays words on-screen in real time as you speak them (`YOU (HEARING...)`).
+- **Cinema-Grade ElevenLabs Integration**: Optional ElevenLabs streaming with automatic exponential backoff retry.
+- **Bilingual & Hinglish Understanding**: Responds warmly to casual Hinglish greetings (*"kaisa hai"*, *"kya chal raha hai"*, *"kisne banaya"*).
+
+---
+
+## ⌨️ Complete Quick Controls & Shortcuts
 
 | Action | Control |
 | :--- | :--- |
+| **Summon / Hide Echo (Desktop)** | **`Alt + Space`** or **`Ctrl + Shift + Space`** |
 | **Speak to Echo** | Click **Mic** or press **Spacebar** |
+| **Toggle Vision / Camera** | Click **Vision** in top bar or say *"Open camera"* |
 | **Transmit Command** | Press **Enter** in command bar or click **Send** |
 | **Toggle Control Center** | Click **Dashboard** in top bar |
 | **Play/Pause Ambient Music** | Click Play on the bottom-left deck |
 | **Inspect Stored Memories** | Click **Memory** in top bar |
 | **Configure API Keys** | Click **Settings** in top bar |
-| **Skip Boot Animation** | Click or press Spacebar on the loader screen |
+
+---
+
+## 🚀 How to Run
+
+### Option A: Native Desktop App (Recommended for OS Automation & Hotkey)
+```bash
+cd C:\Users\aloks\.gemini\antigravity\scratch\Echo-1
+npm start
+```
+
+### Option B: Instant In-Browser Experience (100% Offline)
+Simply double click `index.html` or open it in any web browser (Chrome, Edge, Brave, etc.).
+No installation or build tools required!

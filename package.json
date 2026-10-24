@@ -1,0 +1,36 @@
+{
+  "name": "echo-sentient-companion",
+  "version": "2.6.0",
+  "description": "Echo — Sentient AI Companion with Vision, Natural Human Voice, and OS Automation",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "electron:start": "electron .",
+    "electron:build": "electron-builder --win"
+  },
+  "keywords": [
+    "ai",
+    "assistant",
+    "jarvis",
+    "vision",
+    "speech-recognition",
+    "electron"
+  ],
+  "author": "Alok",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.echo.assistant",
+    "productName": "Echo Assistant",
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

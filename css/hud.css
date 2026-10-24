@@ -503,3 +503,223 @@
     gap: 10px;
     margin-top: 24px;
 }
+
+/* ==========================================================
+   VISION MATRIX PIP & OPTICAL HUD
+========================================================== */
+.vision-pip {
+    position: fixed;
+    top: 80px;
+    right: 32px;
+    width: 280px;
+    background: rgba(18, 18, 24, 0.75);
+    border: 1px solid rgba(0, 229, 255, 0.3);
+    border-radius: 18px;
+    backdrop-filter: blur(35px) saturate(180%);
+    -webkit-backdrop-filter: blur(35px) saturate(180%);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 25px rgba(0, 229, 255, 0.15);
+    z-index: 60;
+    overflow: hidden;
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+}
+
+.vision-pip.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-20px) scale(0.92);
+}
+
+.vision-pip-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.04);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.vision-status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.vision-live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #00ffcc;
+    box-shadow: 0 0 10px #00ffcc;
+    animation: statusBreathe 1.8s infinite;
+}
+
+.vision-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.vision-close-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.vision-close-btn:hover {
+    color: #fff;
+}
+
+.vision-screen {
+    position: relative;
+    width: 100%;
+    height: 180px;
+    background: #07070a;
+    overflow: hidden;
+}
+
+#visionVideo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1); /* Mirror camera for natural reflection */
+    opacity: 0.85;
+}
+
+#visionCanvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    display: none; /* hidden processing canvas */
+}
+
+/* Sci-fi Scanning Reticle */
+.vision-reticle {
+    position: absolute;
+    inset: 16px;
+    border: 1px dashed rgba(0, 229, 255, 0.25);
+    border-radius: 12px;
+    pointer-events: none;
+}
+
+.reticle-corner {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-color: #00e5ff;
+    border-style: solid;
+}
+
+.reticle-corner.top-left { top: -2px; left: -2px; border-width: 2px 0 0 2px; }
+.reticle-corner.top-right { top: -2px; right: -2px; border-width: 2px 2px 0 0; }
+.reticle-corner.bottom-left { bottom: -2px; left: -2px; border-width: 0 0 2px 2px; }
+.reticle-corner.bottom-right { bottom: -2px; right: -2px; border-width: 0 2px 2px 0; }
+
+.scan-laser {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #00e5ff, #00ffcc, transparent);
+    box-shadow: 0 0 8px #00e5ff;
+    animation: scanLaserMove 2.2s linear infinite;
+}
+
+@keyframes scanLaserMove {
+    0% { top: 0%; opacity: 0; }
+    15% { opacity: 1; }
+    85% { opacity: 1; }
+    100% { top: 100%; opacity: 0; }
+}
+
+.vision-overlay-data {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    right: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    pointer-events: none;
+}
+
+.vision-data-chip {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.65);
+    padding: 3px 8px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+}
+
+#cameraBtn.active {
+    background: rgba(0, 229, 255, 0.2);
+    border-color: #00e5ff;
+    color: #00e5ff;
+    box-shadow: 0 0 15px rgba(0, 229, 255, 0.35);
+}
+
+/* ==========================================================
+   DESKTOP WINDOW CONTROLS (Electron Mode)
+========================================================== */
+.electron-window-controls {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    margin-left: 10px;
+    -webkit-app-region: no-drag;
+}
+
+body.electron-mode .electron-window-controls {
+    display: flex;
+}
+
+.win-ctrl-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 11px;
+}
+
+.win-ctrl-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+.win-ctrl-btn.close:hover {
+    background: #ff453a;
+    color: #fff;
+}
+
+/* Mic Active Wave Pulse */
+.mic-btn.listening {
+    background: #00ffcc !important;
+    color: #000 !important;
+    box-shadow: 0 0 25px rgba(0, 255, 204, 0.7), 0 0 50px rgba(0, 255, 204, 0.35);
+    animation: micListeningPulse 1.4s infinite alternate;
+}
+
+@keyframes micListeningPulse {
+    0% { transform: scale(1); filter: drop-shadow(0 0 5px #00ffcc); }
+    100% { transform: scale(1.08); filter: drop-shadow(0 0 20px #00ffcc); }
+}
+

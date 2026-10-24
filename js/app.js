@@ -151,6 +151,32 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    // Camera & Vision Toggle Button
+    const cameraBtn = document.getElementById("cameraBtn");
+    if (cameraBtn && window.echoVision) {
+        cameraBtn.addEventListener("click", async () => {
+            if (window.echoSounds) window.echoSounds.playListenTick();
+            const res = await window.echoVision.toggle();
+            if (res && res.message) {
+                displayDialogue("Echo", res.message);
+                if (window.echoVoice) window.echoVoice.speak(res.message, res.success ? "happy" : "alert");
+            }
+        });
+    }
+
+    // Electron Desktop Integration (Window controls & Dragging)
+    if (typeof window.electronAPI !== "undefined" && window.electronAPI.isElectron) {
+        document.body.classList.add("electron-mode");
+
+        const winMinBtn = document.getElementById("winMinBtn");
+        const winMaxBtn = document.getElementById("winMaxBtn");
+        const winCloseBtn = document.getElementById("winCloseBtn");
+
+        if (winMinBtn) winMinBtn.addEventListener("click", () => window.electronAPI.minimize());
+        if (winMaxBtn) winMaxBtn.addEventListener("click", () => window.electronAPI.maximize());
+        if (winCloseBtn) winCloseBtn.addEventListener("click", () => window.electronAPI.close());
+    }
+
     // Input handlers
     if (sendBtn && commandInput) {
         sendBtn.addEventListener("click", () => {
@@ -182,6 +208,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
         window.echoVoice.onTranscriptCallback = (transcript) => {
             handleUserMessage(transcript);
+        };
+
+        window.echoVoice.onInterimCallback = (interim) => {
+            if (dialogueSpeaker) dialogueSpeaker.textContent = "YOU (HEARING...)";
+            if (dialogueText) dialogueText.textContent = interim;
         };
 
         window.echoVoice.onStateChangeCallback = (state) => {

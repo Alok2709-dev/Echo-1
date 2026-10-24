@@ -56,6 +56,12 @@
       </div>
 
       <div class="hud-actions">
+        <!-- Vision & Camera Toggle -->
+        <button class="hud-btn" id="cameraBtn" title="Toggle Optical Vision Matrix">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          Vision
+        </button>
+
         <!-- Dashboard Toggle -->
         <button class="hud-btn" id="dashboardBtn" title="Open Control Center">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
@@ -79,6 +85,13 @@
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           Settings
         </button>
+
+        <!-- Electron Desktop Window Controls -->
+        <div class="electron-window-controls" id="electronControls">
+          <button class="win-ctrl-btn" id="winMinBtn" title="Minimize Window">&minus;</button>
+          <button class="win-ctrl-btn" id="winMaxBtn" title="Maximize Window">&square;</button>
+          <button class="win-ctrl-btn close" id="winCloseBtn" title="Close Window">&times;</button>
+        </div>
       </div>
     </header>
 
@@ -127,12 +140,14 @@
 
     <!-- Quick Action Suggestion Chips -->
     <div class="quick-chips-row">
+      <button class="quick-chip" data-prompt="How do I look? Check my facial mood">📷 How do I look?</button>
+      <button class="quick-chip" data-prompt="Open Visual Studio Code">💻 Open VS Code</button>
+      <button class="quick-chip" data-prompt="Check system status and cpu telemetry">⚡ System Telemetry</button>
+      <button class="quick-chip" data-prompt="Take a screenshot">📸 Take Screenshot</button>
       <button class="quick-chip" data-prompt="Play ambient rain music">🎵 Play rain music</button>
       <button class="quick-chip" data-prompt="What's the weather today?">⛅ Live weather</button>
       <button class="quick-chip" data-prompt="What is on my calendar schedule?">📅 My schedule</button>
       <button class="quick-chip" data-prompt="What do you know about me?">🔍 What do you know about me?</button>
-      <button class="quick-chip" data-prompt="Remind me to take a break in 1 minute">⏰ Remind me in 1m</button>
-      <button class="quick-chip" data-prompt="Be happy and show joy">🌟 Show joy emotion</button>
     </div>
 
     <!-- Apple-style Floating Command Dock -->
@@ -254,6 +269,8 @@
   <!-- Core Scripts (Zero dependencies, 100% offline & file:// compatible) -->
   <script src="js/utils.js"></script>
   <script src="js/sound.js"></script>
+  <script src="js/osBridge.js"></script>
+  <script src="js/vision.js"></script>
   <script src="js/music.js"></script>
   <script src="js/memory.js"></script>
   <script src="js/dashboard.js"></script>
