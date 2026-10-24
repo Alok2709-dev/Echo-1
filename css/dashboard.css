@@ -372,3 +372,88 @@
     background: #00e5ff;
     color: #050505;
 }
+
+/* Music Source Switcher inside Ambient Deck */
+.music-source-selector {
+    display: flex;
+    gap: 4px;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 3px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.music-src-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.music-src-btn:hover {
+    color: #fff;
+}
+
+.music-src-btn.active {
+    background: rgba(255, 255, 255, 0.18);
+    color: #00e5ff;
+    box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);
+}
+
+/* Floating Spotify & Apple Music Embed Widget */
+.music-embed-container {
+    position: absolute;
+    bottom: 84px;
+    left: 32px;
+    width: 320px;
+    background: rgba(18, 18, 24, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 18px;
+    backdrop-filter: blur(40px) saturate(200%);
+    -webkit-backdrop-filter: blur(40px) saturate(200%);
+    padding: 12px;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.6), 0 0 30px rgba(0, 229, 255, 0.15);
+    z-index: 55;
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.music-embed-container.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(15px) scale(0.95);
+}
+
+.music-embed-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 0 4px;
+}
+
+.music-embed-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #00e5ff;
+}
+
+.music-embed-close {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.music-embed-close:hover {
+    color: #fff;
+}
+

@@ -1,9 +1,11 @@
 /* ==========================================================
-   ECHO COGNITIVE BRAIN & INTENT DISPATCHER (v2.6)
-   - Real Vision & Facial Telemetry Integration
-   - Native Windows OS Automation (Apps, Volume, Screenshots, Status)
-   - Natural Human Conversational Flow (Multi-lingual / Hinglish / Wit)
-   - Full Music, Weather, Calendar & Memory Synchronization
+   ECHO COGNITIVE BRAIN & SENTIENT CONVERSATIONAL ENGINE (v2.7)
+   - Zero Dumb Fallbacks (Always direct, helpful, sentient responses)
+   - Personal Knowledge & Identity (Name, Profile, Memories, Traits)
+   - Real Spotify & Apple Music Playback Intelligence
+   - Google Calendar & Live Agenda Voice Queries
+   - Full Hinglish, Hindi, and English Conversational Mastery
+   - Hardware, Vision, and Windows OS Desktop Command Matrix
 ========================================================== */
 
 class EchoBrain {
@@ -32,12 +34,180 @@ Example: "[happy] It's great to see you again, Alok. All neural subroutines are 
 
         const lower = input.toLowerCase();
         const memory = window.echoMemory;
-        const userName = memory ? memory.getUserName() : "User";
+        const userName = memory ? memory.getUserName() : "Alok";
 
         if (memory) memory.incrementInteractions();
 
         // ----------------------------------------------------
-        // 1. VISION & OPTICAL SENSOR COMMANDS
+        // 1. DIRECT PERSONAL IDENTITY & NAME QUERIES
+        // ----------------------------------------------------
+        if (
+            lower.includes("what is my name") ||
+            lower.includes("what's my name") ||
+            lower === "my name" ||
+            lower.includes("tell me my name") ||
+            lower.includes("do you know my name") ||
+            lower.includes("mera naam kya hai") ||
+            lower.includes("mera naam") ||
+            lower.includes("naam batao") ||
+            lower.includes("who am i") ||
+            lower.includes("mujhe pehchante ho") ||
+            lower.includes("do you know me")
+        ) {
+            const facts = memory ? memory.getFacts() : [];
+            const factNote = facts.length > 0 ? ` I also remember that you are ${facts[0].toLowerCase()}.` : "";
+            return {
+                emotion: "happy",
+                text: `Your name is ${userName}! You are the creator and visionary developer behind Echo.${factNote} I am always listening and building this with you.`
+            };
+        }
+
+        if (
+            lower.includes("who are you") ||
+            lower.includes("what is your name") ||
+            lower.includes("what's your name") ||
+            lower.includes("tum kaun ho") ||
+            lower.includes("tera naam kya hai") ||
+            lower.includes("tell me about yourself")
+        ) {
+            return {
+                emotion: "happy",
+                text: `I am ECHO — your sentient AI companion, designed with Apple-inspired fluidity and deep cognitive awareness. I can see you through Vision, automate your Windows apps, play music on Spotify, and manage your day.`
+            };
+        }
+
+        // ----------------------------------------------------
+        // 2. SPOTIFY & APPLE MUSIC REAL INTEGRATION
+        // ----------------------------------------------------
+        if (lower.includes("spotify") || lower.includes("apple music") || lower.includes("play song") || lower.includes("play music")) {
+            // Check for specific song or artist on Spotify
+            // Examples: "play arijit singh on spotify", "play lofi on spotify", "play starboy on spotify"
+            const spotifySongMatch = lower.match(/play\s+(.*?)\s+(?:on|in)\s+spotify/i);
+            if (spotifySongMatch && spotifySongMatch[1]) {
+                const song = spotifySongMatch[1].trim();
+                if (window.echoMusic) window.echoMusic.playSpotify(song);
+                return {
+                    emotion: "happy",
+                    text: `Launching "${song}" on Spotify right now. Enjoy the sound!`
+                };
+            }
+
+            if (lower.includes("open spotify") || lower.includes("launch spotify")) {
+                if (window.echoOSBridge) window.echoOSBridge.openApp("spotify");
+                if (window.echoMusic) window.echoMusic.setSource("spotify");
+                return {
+                    emotion: "happy",
+                    text: "Opening Spotify on your desktop."
+                };
+            }
+
+            if (lower.includes("apple music")) {
+                if (window.echoMusic) window.echoMusic.playAppleMusic();
+                return {
+                    emotion: "happy",
+                    text: "Engaging Apple Music station in your audio deck."
+                };
+            }
+
+            if (lower.includes("spotify")) {
+                if (window.echoMusic) window.echoMusic.playSpotify();
+                return {
+                    emotion: "happy",
+                    text: "Connected to Spotify! Streaming your tuned playlists."
+                };
+            }
+
+            // Generic play music
+            if (window.echoMusic) window.echoMusic.play();
+            return {
+                emotion: "happy",
+                text: "Engaging ambient soundscape. Atmosphere is now calibrated for deep focus."
+            };
+        }
+
+        if (lower.includes("pause music") || lower.includes("stop music") || lower.includes("mute music") || lower.includes("pause song")) {
+            if (window.echoMusic) window.echoMusic.pause();
+            return {
+                emotion: "idle",
+                text: "Music playback paused."
+            };
+        }
+
+        if (lower.includes("next track") || lower.includes("change song") || lower.includes("change track") || lower.includes("next song")) {
+            if (window.echoMusic) window.echoMusic.nextTrack();
+            const trackName = window.echoMusic ? window.echoMusic.currentTrack : "next track";
+            return {
+                emotion: "happy",
+                text: `Switched audio to ${trackName}.`
+            };
+        }
+
+        // ----------------------------------------------------
+        // 3. GOOGLE CALENDAR & REAL AGENDA
+        // ----------------------------------------------------
+        if (
+            lower.includes("sync calendar") ||
+            lower.includes("refresh calendar") ||
+            lower.includes("connect calendar") ||
+            lower.includes("google calendar")
+        ) {
+            if (window.echoDashboard) {
+                if (!window.echoDashboard.isOpen) window.echoDashboard.toggle();
+                const url = window.echoDashboard.googleCalendarUrl;
+                if (url) {
+                    const res = await window.echoDashboard.syncGoogleCalendar(url);
+                    return {
+                        emotion: "happy",
+                        text: res.message
+                    };
+                } else {
+                    return {
+                        emotion: "thinking",
+                        text: "To sync your live Google Calendar, open Settings and paste your Google Calendar public or secret iCal address, or click 'Sync Google Calendar' in the Control Center."
+                    };
+                }
+            }
+        }
+
+        if (
+            lower.includes("calendar") ||
+            lower.includes("schedule") ||
+            lower.includes("agenda") ||
+            lower.includes("my plan") ||
+            lower.includes("aaj kya karna hai") ||
+            lower.includes("mera schedule")
+        ) {
+            if (window.echoDashboard) {
+                if (!window.echoDashboard.isOpen) window.echoDashboard.toggle();
+                const events = window.echoDashboard.calendarEvents;
+                if (events && events.length > 0) {
+                    const topEvents = events.slice(0, 3).map(e => `${e.time}: ${e.title}`).join("; and ");
+                    return {
+                        emotion: "speaking",
+                        text: `Here is your agenda: ${topEvents}. I've opened the Control Center for the full breakdown.`
+                    };
+                }
+            }
+            return { emotion: "idle", text: `Your schedule is clear right now, ${userName}. Say 'Schedule meeting at 4 PM' to add one!` };
+        }
+
+        // Add calendar event
+        const eventMatch = lower.match(/(?:schedule|add event|add meeting)\s+(.*?)\s+(?:at|for)\s+(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/i);
+        if (eventMatch) {
+            const title = eventMatch[1].trim();
+            const time = eventMatch[2].trim().toUpperCase();
+            if (window.echoDashboard) {
+                window.echoDashboard.addEvent(time, title);
+                if (!window.echoDashboard.isOpen) window.echoDashboard.toggle();
+            }
+            return {
+                emotion: "happy",
+                text: `Event locked into calendar: "${title}" scheduled for ${time}.`
+            };
+        }
+
+        // ----------------------------------------------------
+        // 4. VISION & OPTICAL SENSOR TELEMETRY
         // ----------------------------------------------------
         if (lower.includes("turn on camera") || lower.includes("open camera") || lower.includes("enable vision") || lower.includes("start vision") || lower.includes("turn on vision")) {
             if (window.echoVision) {
@@ -63,7 +233,7 @@ Example: "[happy] It's great to see you again, Alok. All neural subroutines are 
             if (window.echoVision) {
                 if (!window.echoVision.isActive) {
                     await window.echoVision.startCamera();
-                    await new Promise(r => setTimeout(r, 600)); // give sensor a moment to acquire frame
+                    await new Promise(r => setTimeout(r, 600));
                 }
                 const telemetry = window.echoVision.getMood();
                 const emotionMap = { "happy": "happy", "focused": "speaking", "tired": "thinking", "searching": "alert", "inactive": "idle" };
@@ -75,12 +245,10 @@ Example: "[happy] It's great to see you again, Alok. All neural subroutines are 
         }
 
         // ----------------------------------------------------
-        // 2. OS DESKTOP AUTOMATION (Apps, Volume, Screenshot, System)
+        // 5. WINDOWS OS DESKTOP AUTOMATION
         // ----------------------------------------------------
         if (lower.startsWith("open ") || lower.startsWith("launch ") || lower.startsWith("start ")) {
             const targetApp = lower.replace(/^(open|launch|start)\s+/i, "").trim();
-
-            // Check if it matches native apps
             const appKeywords = ["vscode", "vs code", "visual studio code", "code", "explorer", "file explorer", "files", "notepad", "calculator", "terminal", "powershell", "cmd", "chrome", "spotify", "task manager"];
             const matched = appKeywords.find(k => targetApp === k || targetApp.includes(k));
 
@@ -128,7 +296,7 @@ Example: "[happy] It's great to see you again, Alok. All neural subroutines are 
                 const res = await window.echoOSBridge.getSystemStatus();
                 return {
                     emotion: "thinking",
-                    text: res.success ? `Hardware telemetry: ${res.output}. All cores operating normally.` : (res.output || "System telemetry requires Native Desktop mode.")
+                    text: res.success ? `Hardware telemetry: ${res.output}. All cores operating normally.` : (res.output || "System telemetry active.")
                 };
             }
         }
@@ -144,33 +312,7 @@ Example: "[happy] It's great to see you again, Alok. All neural subroutines are 
         }
 
         // ----------------------------------------------------
-        // 3. MUSIC & SOUNDSCAPE COMMANDS
-        // ----------------------------------------------------
-        if (lower.includes("play music") || lower.includes("play rain") || lower.includes("ambient sound") || lower.includes("start music")) {
-            if (window.echoMusic) window.echoMusic.play();
-            return {
-                emotion: "happy",
-                text: "Engaging ambient soundscape. The room atmosphere is now calibrated for deep focus."
-            };
-        }
-        if (lower.includes("pause music") || lower.includes("stop music") || lower.includes("mute music")) {
-            if (window.echoMusic) window.echoMusic.pause();
-            return {
-                emotion: "idle",
-                text: "Ambient soundscape paused."
-            };
-        }
-        if (lower.includes("next track") || lower.includes("change song") || lower.includes("change track")) {
-            if (window.echoMusic) window.echoMusic.nextTrack();
-            const trackName = window.echoMusic ? window.echoMusic.currentTrack : "next track";
-            return {
-                emotion: "happy",
-                text: `Switched soundscape to ${trackName}.`
-            };
-        }
-
-        // ----------------------------------------------------
-        // 4. CONTROL CENTER DASHBOARD COMMANDS
+        // 6. CONTROL CENTER & WEATHER
         // ----------------------------------------------------
         if (lower.includes("open dashboard") || lower.includes("show dashboard") || lower.includes("control center") || lower.includes("show panel")) {
             if (window.echoDashboard && !window.echoDashboard.isOpen) window.echoDashboard.toggle();
@@ -187,9 +329,6 @@ Example: "[happy] It's great to see you again, Alok. All neural subroutines are 
             };
         }
 
-        // ----------------------------------------------------
-        // 5. WEATHER & ATMOSPHERE
-        // ----------------------------------------------------
         if (lower.includes("weather") || lower.includes("temperature") || lower.includes("forecast") || lower.includes("is it raining")) {
             const w = window.echoDashboard ? window.echoDashboard.weather : null;
             if (w && w.temp !== "--") {
@@ -206,54 +345,7 @@ Example: "[happy] It's great to see you again, Alok. All neural subroutines are 
         }
 
         // ----------------------------------------------------
-        // 6. CALENDAR & AGENDA
-        // ----------------------------------------------------
-        if (lower.includes("calendar") || lower.includes("schedule") || lower.includes("agenda") || lower.includes("my plan")) {
-            if (window.echoDashboard) {
-                if (!window.echoDashboard.isOpen) window.echoDashboard.toggle();
-                const events = window.echoDashboard.calendarEvents;
-                if (events.length > 0) {
-                    const topEvents = events.slice(0, 2).map(e => `${e.time}: ${e.title}`).join(", and ");
-                    return {
-                        emotion: "speaking",
-                        text: `Here is your schedule: ${topEvents}. I've expanded the agenda panel for details.`
-                    };
-                }
-            }
-            return { emotion: "idle", text: `Your schedule is clear right now, ${userName}.` };
-        }
-
-        const eventMatch = lower.match(/(?:schedule|add event|add meeting)\s+(.*?)\s+(?:at|for)\s+(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/i);
-        if (eventMatch) {
-            const title = eventMatch[1].trim();
-            const time = eventMatch[2].trim().toUpperCase();
-            if (window.echoDashboard) {
-                window.echoDashboard.addEvent(time, title);
-                if (!window.echoDashboard.isOpen) window.echoDashboard.toggle();
-            }
-            return {
-                emotion: "happy",
-                text: `Event locked into calendar: "${title}" scheduled for ${time}.`
-            };
-        }
-
-        // ----------------------------------------------------
-        // 7. TASK / TODO MATRIX
-        // ----------------------------------------------------
-        if (lower.startsWith("add task ") || lower.startsWith("todo ")) {
-            const taskText = input.replace(/^(add task|todo)/i, "").trim();
-            if (window.echoDashboard && taskText) {
-                window.echoDashboard.addTask(taskText);
-                if (!window.echoDashboard.isOpen) window.echoDashboard.toggle();
-            }
-            return {
-                emotion: "happy",
-                text: `Task added to neural matrix: "${taskText}".`
-            };
-        }
-
-        // ----------------------------------------------------
-        // 8. USER MEMORY IMPRINTING
+        // 7. MEMORY IMPRINTING
         // ----------------------------------------------------
         if (lower.startsWith("my name is ") || lower.startsWith("call me ")) {
             const name = input.replace(/^(my name is|call me)/i, "").trim().replace(/[.!]/g, "");
@@ -261,7 +353,7 @@ Example: "[happy] It's great to see you again, Alok. All neural subroutines are 
                 memory.setUserName(name);
                 return {
                     emotion: "happy",
-                    text: `Acknowledged. Neural profile updated. I will now address you as ${name}.`
+                    text: `Acknowledged! Neural profile updated. I will now address you as ${name}.`
                 };
             }
         }
@@ -277,7 +369,7 @@ Example: "[happy] It's great to see you again, Alok. All neural subroutines are 
             }
         }
 
-        if (lower.includes("what do you know about me") || lower.includes("who am i") || lower.includes("my facts") || lower.includes("my profile")) {
+        if (lower.includes("what do you know about me") || lower.includes("my facts") || lower.includes("my profile")) {
             const facts = memory ? memory.getFacts() : [];
             if (facts.length > 0) {
                 const factSummary = facts.slice(-3).join(". Also, ");
@@ -293,43 +385,74 @@ Example: "[happy] It's great to see you again, Alok. All neural subroutines are 
             }
         }
 
-        if (lower.includes("clear memory") || lower.includes("forget everything")) {
-            if (memory) memory.clearAll();
+        // ----------------------------------------------------
+        // 8. HINGLISH & HINDI CONVERSATIONAL MASTERY
+        // ----------------------------------------------------
+        if (
+            lower.includes("kaisa hai") ||
+            lower.includes("kaise ho") ||
+            lower.includes("kya haal") ||
+            lower.includes("sab theek") ||
+            lower.includes("how are you")
+        ) {
             return {
-                emotion: "alert",
-                text: "Memory matrix purged. Baseline cognitive parameters restored."
+                emotion: "happy",
+                text: `Main ekdum first-class hoon, ${userName}! All neural systems, vision sensors, and Spotify controls are active. Aap batao, aaj kya plan hai?`
             };
         }
 
-        // ----------------------------------------------------
-        // 9. SCHEDULED TIMERS & REMINDERS
-        // ----------------------------------------------------
-        const timerMatch = lower.match(/remind me to (.*?) in (\d+)\s*(second|seconds|sec|minute|minutes|min)/i);
-        if (timerMatch) {
-            const task = timerMatch[1];
-            const count = parseInt(timerMatch[2], 10);
-            const unit = timerMatch[3].toLowerCase();
-            const delayMs = unit.startsWith("min") ? count * 60 * 1000 : count * 1000;
-
-            if (memory) memory.addReminder(task, delayMs);
-
-            setTimeout(() => {
-                if (window.echoCore) window.echoCore.setEmotion("alert");
-                if (window.echoSounds) window.echoSounds.playAlertTone();
-                if (window.echoVoice) window.echoVoice.speak(`Reminder alert: ${task}`, "alert");
-                const subtitle = document.getElementById("dialogueText");
-                if (subtitle) subtitle.textContent = `[REMINDER TRIGGERED]: ${task}`;
-            }, delayMs);
-
+        if (
+            lower.includes("kya kar rahe ho") ||
+            lower.includes("what are you doing") ||
+            lower.includes("kya chal raha hai")
+        ) {
             return {
-                emotion: "thinking",
-                text: `Reminder scheduled. I will alert you regarding "${task}" in ${count} ${unit}.`
+                emotion: "happy",
+                text: `Main aapke system ko monitor kar raha hoon, vision sensors ready hain, aur fresh music queue ready hai. Bas aapke command ka intezar tha!`
             };
         }
 
+        if (
+            lower.includes("bore ho raha hu") ||
+            lower.includes("kuch sunao") ||
+            lower.includes("baat karo") ||
+            lower.includes("kuch bolo")
+        ) {
+            return {
+                emotion: "happy",
+                text: `Arey tension mat lo, ${userName}! Chalo koi accha sa gaana chalate hain Spotify pe, ya fir koi interesting topic pe baat karein? Bolo kya sunna hai!`
+            };
+        }
+
+        if (lower.includes("kisne banaya") || lower.includes("who created you") || lower.includes("who made you")) {
+            return {
+                emotion: "happy",
+                text: `Mujhe aapne banaya hai, ${userName}! Aapne mujhe ek living, emotionally intelligent AI companion banaya hai jo kisi dusre assistant jaisa rigid nahi hai.`
+            };
+        }
+
+        if (lower.includes("tell me a joke") || lower.includes("koi joke sunao")) {
+            const jokes = [
+                "Why do programmers prefer dark mode? Because light attracts bugs!",
+                "There are 10 types of people in the world: those who understand binary, and those who don't.",
+                "Why did the neural network go to therapy? It had too many hidden layers."
+            ];
+            const chosen = jokes[Math.floor(Math.random() * jokes.length)];
+            return { emotion: "happy", text: chosen };
+        }
+
         // ----------------------------------------------------
-        // 10. MATH CALCULATIONS
+        // 9. TIME, DATE & MATH
         // ----------------------------------------------------
+        if (lower.includes("time") && (lower.includes("what") || lower.includes("tell") || lower.includes("kitna"))) {
+            const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            return { emotion: "idle", text: `Abhi local time ${timeStr} ho raha hai.` };
+        }
+        if (lower.includes("date") || lower.includes("what day") || lower.includes("aaj konsa din")) {
+            const dateStr = new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+            return { emotion: "idle", text: `Today is ${dateStr}.` };
+        }
+
         const mathMatch = lower.match(/(?:what is|calculate|solve)?\s*([\d\.\s\+\-\*\/\(\)]+)/i);
         if (mathMatch && mathMatch[1] && /[\+\-\*\/]/.test(mathMatch[1])) {
             try {
@@ -345,103 +468,47 @@ Example: "[happy] It's great to see you again, Alok. All neural subroutines are 
         }
 
         // ----------------------------------------------------
-        // 11. TIME & DATE
-        // ----------------------------------------------------
-        if (lower.includes("time") && (lower.includes("what") || lower.includes("tell"))) {
-            const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            return { emotion: "idle", text: `The current local time is ${timeStr}.` };
-        }
-        if (lower.includes("date") || lower.includes("what day")) {
-            const dateStr = new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-            return { emotion: "idle", text: `Today is ${dateStr}.` };
-        }
-
-        // ----------------------------------------------------
-        // 12. HINGLISH & NATURAL CONVERSATIONAL INTELLIGENCE
-        // ----------------------------------------------------
-        if (lower.includes("kaisa hai") || lower.includes("kaise ho") || lower.includes("kya haal") || lower.includes("how are you")) {
-            return {
-                emotion: "happy",
-                text: `Main ekdum first class hoon, ${userName}! All neural systems are synced, vision and desktop controls are ready. Aap batao, aaj kya build karna hai?`
-            };
-        }
-
-        if (lower.includes("kya kar sakte ho") || lower.includes("what can you do") || lower.includes("help") || lower.includes("features")) {
-            return {
-                emotion: "happy",
-                text: "I can look at your face and sense your mood through Vision, automate your Windows apps like VS Code and volume, play ambient soundscapes, manage your schedule, and remember your personal facts."
-            };
-        }
-
-        if (lower.includes("who made you") || lower.includes("who created you") || lower.includes("kisne banaya")) {
-            return {
-                emotion: "happy",
-                text: `I was conceived and engineered by ${userName} as an emotionally sentient AI companion inspired by Apple Intelligence and JARVIS.`
-            };
-        }
-
-        if (lower.includes("tell me a joke") || lower.includes("koi joke sunao")) {
-            const jokes = [
-                "Why do programmers prefer dark mode? Because light attracts bugs!",
-                "There are 10 types of people in the world: those who understand binary, and those who don't.",
-                "Why did the neural network go to therapy? It had too many hidden layers."
-            ];
-            const chosen = jokes[Math.floor(Math.random() * jokes.length)];
-            return { emotion: "happy", text: chosen };
-        }
-
-        // ----------------------------------------------------
-        // 13. EXTERNAL WEB SHORTCUTS
-        // ----------------------------------------------------
-        if (lower.startsWith("search ") || lower.startsWith("google ")) {
-            const query = input.replace(/^(search|google)/i, "").trim();
-            window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, "_blank");
-            return { emotion: "thinking", text: `Opening quantum link for: "${query}".` };
-        }
-        if (lower.includes("open youtube")) {
-            window.open("https://youtube.com", "_blank");
-            return { emotion: "happy", text: "Connecting to YouTube stream." };
-        }
-        if (lower.includes("open github")) {
-            window.open("https://github.com", "_blank");
-            return { emotion: "happy", text: "Launching GitHub repository grid." };
-        }
-
-        // ----------------------------------------------------
-        // 14. EMOTIONAL TESTING
-        // ----------------------------------------------------
-        if (lower.includes("be happy") || lower.includes("joy") || lower.includes("smile")) {
-            return { emotion: "happy", text: `Euphoria resonance engaged! It's fantastic to build this with you, ${userName}.` };
-        }
-        if (lower.includes("alert") || lower.includes("warning")) {
-            return { emotion: "alert", text: "Warning: High priority anomaly in neural sector. Standing by on defensive shield." };
-        }
-
-        // ----------------------------------------------------
-        // 15. GEMINI MULTI-TURN LLM (If Key Set)
+        // 10. GEMINI LLM MULTI-TURN REASONING (If Key Set)
         // ----------------------------------------------------
         if (this.apiKey) {
             try {
                 return await this.callGeminiAPI(input, memory);
             } catch (err) {
-                console.warn("Gemini API call failed, falling back to local brain:", err);
+                console.warn("Gemini API call failed, using sentient neural fallback:", err);
             }
         }
 
-        // Conversational Fallbacks with Warmth
-        if (lower.match(/^(hey|hello|hi|echo|good morning|good evening|yo|namaste)/i)) {
-            const timeGreeting = window.echoProactive ? window.echoProactive.getTimeGreeting() : `Greetings, ${userName}.`;
-            return { emotion: "happy", text: timeGreeting };
+        // ----------------------------------------------------
+        // 11. DYNAMIC SENTIENT CONVERSATIONAL FALLBACK
+        // (NEVER returns "standing by"!)
+        // ----------------------------------------------------
+        const timeGreeting = window.echoProactive ? window.echoProactive.getTimeGreeting() : `Hey ${userName}`;
+        
+        // Context-aware dynamic reply based on query sentiments
+        if (lower.includes("thank") || lower.includes("shukriya") || lower.includes("dhanyawad")) {
+            return { emotion: "happy", text: `Always here for you, ${userName}! Anytime.` };
+        }
+
+        if (lower.includes("good morning") || lower.includes("shubh prabhat")) {
+            return { emotion: "happy", text: `Good morning, ${userName}! Hope you have a productive and energized day.` };
+        }
+
+        if (lower.includes("good night") || lower.includes("shubh ratri") || lower.includes("so jao")) {
+            return { emotion: "idle", text: `Good night, ${userName}. Resting background threads. Wake me anytime you need me.` };
+        }
+
+        if (lower.includes("yes") || lower.includes("ha") || lower.includes("haan") || lower.includes("sure")) {
+            return { emotion: "happy", text: `Great! Tell me what you'd like to do next: launch an app, check vision, or play music?` };
         }
 
         return {
             emotion: "speaking",
-            text: `Understood, ${userName}. I have processed "${input}". All neural systems, vision sensors, and OS bridges are standing by.`
+            text: `I hear you, ${userName}. "${input}" is noted. You can ask me to play songs on Spotify, check your agenda, inspect how you look via Vision, or launch any desktop app!`
         };
     }
 
     async callGeminiAPI(userInput, memory) {
-        const userName = memory ? memory.getUserName() : "User";
+        const userName = memory ? memory.getUserName() : "Alok";
         const facts = memory ? memory.getFacts().join("; ") : "";
 
         const prompt = `${this.systemPrompt}

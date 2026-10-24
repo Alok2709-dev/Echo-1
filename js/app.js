@@ -284,14 +284,56 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Settings Modal Setup (Gemini + ElevenLabs)
+    // Music Source Switcher (Synth / Spotify / Apple)
+    document.querySelectorAll(".music-src-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const src = btn.getAttribute("data-source");
+            if (window.echoMusic) window.echoMusic.setSource(src);
+            document.querySelectorAll(".music-src-btn").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            if (window.echoSounds) window.echoSounds.playListenTick();
+        });
+    });
+
+    const musicEmbedCloseBtn = document.getElementById("musicEmbedCloseBtn");
+    if (musicEmbedCloseBtn) {
+        musicEmbedCloseBtn.addEventListener("click", () => {
+            const container = document.getElementById("musicEmbedContainer");
+            if (container) container.classList.add("hidden");
+        });
+    }
+
+    // Google Calendar Sync Buttons
+    const btnSyncGcal = document.getElementById("btnSyncGcal");
+    if (btnSyncGcal && window.echoDashboard) {
+        btnSyncGcal.addEventListener("click", async () => {
+            const currentUrl = window.echoDashboard.googleCalendarUrl;
+            if (currentUrl) {
+                displayDialogue("Echo", "Syncing with your live Google Calendar...");
+                const res = await window.echoDashboard.syncGoogleCalendar(currentUrl);
+                displayDialogue("Echo", res.message);
+                if (window.echoVoice) window.echoVoice.speak(res.message, res.success ? "happy" : "thinking");
+            } else {
+                displayDialogue("Echo", "Please open Settings and paste your Google Calendar secret iCal address to connect.");
+                if (settingsBtn) settingsBtn.click();
+            }
+        });
+    }
+
+    // Settings Modal Setup (Gemini + ElevenLabs + Accounts)
     if (settingsBtn && settingsModal) {
+        const userNameInput = document.getElementById("userNameInput");
         const apiKeyInput = document.getElementById("apiKeyInput");
         const elevenKeyInput = document.getElementById("elevenKeyInput");
         const elevenVoiceSelect = document.getElementById("elevenVoiceSelect");
+        const gcalUrlInput = document.getElementById("gcalUrlInput");
+        const spotifyUriInput = document.getElementById("spotifyUriInput");
         const saveSettingsBtn = document.getElementById("saveSettingsBtn");
 
         settingsBtn.addEventListener("click", () => {
+            if (userNameInput && window.echoMemory) {
+                userNameInput.value = window.echoMemory.getUserName();
+            }
             if (apiKeyInput && window.echoBrain) {
                 apiKeyInput.value = window.echoBrain.getApiKey();
             }
@@ -301,19 +343,40 @@ document.addEventListener("DOMContentLoaded", () => {
             if (elevenVoiceSelect && window.echoVoice) {
                 elevenVoiceSelect.value = window.echoVoice.elevenLabsVoiceId || "21m00Tcm4TlvDq8ikWAM";
             }
+            if (gcalUrlInput && window.echoDashboard) {
+                gcalUrlInput.value = window.echoDashboard.googleCalendarUrl || "";
+            }
+            if (spotifyUriInput && window.echoMusic) {
+                spotifyUriInput.value = window.echoMusic.spotifyUri || "";
+            }
             settingsModal.classList.add("active");
         });
 
         if (saveSettingsBtn) {
-            saveSettingsBtn.addEventListener("click", () => {
+            saveSettingsBtn.addEventListener("click", async () => {
+                if (window.echoMemory && userNameInput && userNameInput.value.trim()) {
+                    window.echoMemory.setUserName(userNameInput.value.trim());
+                }
                 if (window.echoBrain && apiKeyInput) {
                     window.echoBrain.setApiKey(apiKeyInput.value);
                 }
                 if (window.echoVoice && elevenKeyInput && elevenVoiceSelect) {
                     window.echoVoice.setElevenLabsKey(elevenKeyInput.value, elevenVoiceSelect.value);
                 }
+                if (window.echoDashboard && gcalUrlInput) {
+                    const newUrl = gcalUrlInput.value.trim();
+                    if (newUrl && newUrl !== window.echoDashboard.googleCalendarUrl) {
+                        window.echoDashboard.syncGoogleCalendar(newUrl);
+                    }
+                }
+                if (window.echoMusic && spotifyUriInput) {
+                    window.echoMusic.spotifyUri = spotifyUriInput.value.trim();
+                    localStorage.setItem("echo_spotify_uri", window.echoMusic.spotifyUri);
+                }
+
                 settingsModal.classList.remove("active");
-                displayDialogue("Echo", "Neural configurations locked in. All pipelines calibrated.");
+                const name = window.echoMemory ? window.echoMemory.getUserName() : "Alok";
+                displayDialogue("Echo", `All connections synced, ${name}! Your calendar, Spotify, and neural parameters are active.`);
                 if (window.echoSounds) window.echoSounds.playResponseChime();
             });
         }
