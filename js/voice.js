@@ -1,9 +1,10 @@
 /* ==========================================================
-   ECHO VOICE & NEURAL SPEECH ENGINE (v2.6 Ultra-Human Polish)
-   - Human-Grade Speech Synthesis (Natural Neural Cadence)
-   - Continuous Interim Speech Recognition with Noise Filtering
-   - Expressive Multi-turn Prosody & Emotion Modulation
-   - ElevenLabs Cinema Streaming with Exponential Backoff
+   ECHO MASTER VOICE & SPEECH ENGINE (v3.1 Unified Architecture)
+   - Unified Single-Stream Speech Recognition (Zero Hardware Conflicts)
+   - Integrated "Hey Echo" Wake Word Detection + Command Capture
+   - Human-Grade Neural Voice Selection (Microsoft Online Natural / Google)
+   - Expressive Human Prosody, Breathing Pauses & Intonation
+   - ElevenLabs Cinema Streaming Integration
 ========================================================== */
 
 class EchoVoiceEngine {
@@ -12,11 +13,17 @@ class EchoVoiceEngine {
         this.recognition = null;
         this.isListening = false;
         this.isSpeaking = false;
+        this.isWakeWordActive = localStorage.getItem("echo_wakeword_enabled") !== "false";
+        
+        // Mode: 'wakeword' (listening for "hey echo") or 'command' (capturing full sentence)
+        this.listenMode = 'wakeword';
+
         this.audioContext = null;
         this.analyser = null;
         this.dataArray = null;
         this.micStream = null;
         this.audioLevel = 0;
+
         this.onTranscriptCallback = null;
         this.onInterimCallback = null;
         this.onStateChangeCallback = null;
@@ -25,13 +32,22 @@ class EchoVoiceEngine {
         this.elevenLabsVoiceId = localStorage.getItem("echo_elevenlabs_voice_id") || "21m00Tcm4TlvDq8ikWAM"; // Rachel
 
         this.currentAudioEl = null;
-        this.speechQueue = [];
-        this.isProcessingQueue = false;
-
         this.cachedVoices = [];
+        this.restartTimer = null;
+        this.silenceTimer = null;
+
+        this.wakePatterns = [
+            /^hey\s+echo/i,
+            /^ok\s+echo/i,
+            /^hello\s+echo/i,
+            /^sun\s+echo/i,
+            /^suno\s+echo/i,
+            /^echo\b/i
+        ];
+
         this.initVoices();
-        this.initSpeechRecognition();
         this.initAudioContext();
+        this.initUnifiedSpeechRecognition();
     }
 
     initVoices() {
@@ -89,79 +105,169 @@ class EchoVoiceEngine {
         }
     }
 
-    initSpeechRecognition() {
+    // Unified Master Single-Stream Pipeline
+    initUnifiedSpeechRecognition() {
         const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRec) {
-            console.warn("Speech Recognition not supported in this environment.");
+            console.warn("[EchoVoice] Web Speech API not supported.");
             return;
         }
 
         this.recognition = new SpeechRec();
-        this.recognition.continuous = false;
-        this.recognition.interimResults = true; // Real-time interim feedback
+        this.recognition.continuous = true;
+        this.recognition.interimResults = true;
         this.recognition.lang = "en-US";
 
-        let finalTranscriptAccumulator = "";
+        let currentSentence = "";
 
         this.recognition.onstart = () => {
             this.isListening = true;
-            finalTranscriptAccumulator = "";
             this.startMicStream();
-            if (this.onStateChangeCallback) this.onStateChangeCallback("listening");
+            if (this.onStateChangeCallback) {
+                this.onStateChangeCallback(this.listenMode === 'command' ? 'listening' : 'idle');
+            }
         };
 
         this.recognition.onresult = (event) => {
-            let interimTranscript = "";
+            // Do not listen to own synthesized voice speaking
+            if (this.isSpeaking) return;
+
+            let interimStr = "";
+            let finalStr = "";
+
             for (let i = event.resultIndex; i < event.results.length; ++i) {
+                const text = event.results[i][0].transcript;
                 if (event.results[i].isFinal) {
-                    finalTranscriptAccumulator += event.results[i][0].transcript;
+                    finalStr += text;
                 } else {
-                    interimTranscript += event.results[i][0].transcript;
+                    interimStr += text;
                 }
             }
 
-            // Stream interim to UI so the user sees Echo hearing them in real-time
-            if (this.onInterimCallback && interimTranscript) {
-                this.onInterimCallback(interimTranscript);
-            }
+            const activeTranscript = (finalStr || interimStr).trim();
+            if (!activeTranscript) return;
 
-            if (finalTranscriptAccumulator && this.onTranscriptCallback) {
-                const text = finalTranscriptAccumulator.trim();
-                finalTranscriptAccumulator = "";
-                this.onTranscriptCallback(text);
+            // 1. WAKE-WORD DETECTION PHASE (When Idle)
+            if (this.listenMode === 'wakeword') {
+                for (let pattern of this.wakePatterns) {
+                    if (pattern.test(activeTranscript)) {
+                        console.log(`[EchoVoice] Wake word detected: "${activeTranscript}"`);
+                        
+                        // Switch immediately to command capture mode
+                        this.listenMode = 'command';
+                        if (this.onStateChangeCallback) this.onStateChangeCallback('listening');
+                        if (window.echoSounds) window.echoSounds.playWakeChime();
+
+                        // Check if command was spoken in the same breath
+                        const remaining = activeTranscript.replace(pattern, "").trim().replace(/^[,.]/, "").trim();
+                        if (remaining.length > 2) {
+                            this.dispatchCommand(remaining);
+                        } else {
+                            // User just said "Hey Echo" -> acknowledge and listen for command
+                            this.acknowledgeWake();
+                        }
+                        return;
+                    }
+                }
+            } 
+            // 2. COMMAND CAPTURE PHASE
+            else if (this.listenMode === 'command') {
+                if (this.onInterimCallback && activeTranscript) {
+                    this.onInterimCallback(activeTranscript);
+                }
+
+                // If final sentence delivered, process it
+                if (finalStr) {
+                    this.dispatchCommand(finalStr.trim());
+                } else {
+                    // Reset silence timeout
+                    clearTimeout(this.silenceTimer);
+                    this.silenceTimer = setTimeout(() => {
+                        if (interimStr.trim()) {
+                            this.dispatchCommand(interimStr.trim());
+                        }
+                    }, 1400);
+                }
             }
         };
 
         this.recognition.onerror = (event) => {
-            console.warn("Speech recognition error:", event.error);
-            this.isListening = false;
-            if (this.onStateChangeCallback) this.onStateChangeCallback("idle");
+            if (event.error !== "not-allowed" && event.error !== "aborted") {
+                this.scheduleRestart();
+            }
         };
 
         this.recognition.onend = () => {
             this.isListening = false;
-            this.stopMicStream();
-            if (this.onStateChangeCallback) this.onStateChangeCallback("idle");
+            // Always automatically reconnect so mic is NEVER dead
+            this.scheduleRestart();
         };
+
+        // Start master listening after brief delay
+        setTimeout(() => this.startMasterRecognition(), 1000);
     }
 
-    toggleListening() {
-        if (!this.recognition) {
-            alert("Speech Recognition not available in this browser. You can type in the dock!");
-            return false;
+    startMasterRecognition() {
+        if (!this.recognition || this.isListening) return;
+        try {
+            this.recognition.start();
+        } catch (e) {
+            this.scheduleRestart();
         }
+    }
 
-        if (this.isListening) {
-            this.recognition.stop();
+    scheduleRestart() {
+        clearTimeout(this.restartTimer);
+        this.restartTimer = setTimeout(() => {
+            if (!this.isListening && !this.isSpeaking) {
+                this.startMasterRecognition();
+            }
+        }, 800);
+    }
+
+    // Trigger command mode directly (e.g. mic button or spacebar)
+    toggleListening() {
+        if (this.listenMode === 'command') {
+            this.listenMode = 'wakeword';
+            if (this.onStateChangeCallback) this.onStateChangeCallback('idle');
             return false;
         } else {
-            try {
-                this.stopSpeaking();
-                this.recognition.start();
-                return true;
-            } catch (e) {
-                return false;
-            }
+            this.stopSpeaking();
+            this.listenMode = 'command';
+            if (this.onStateChangeCallback) this.onStateChangeCallback('listening');
+            if (window.echoSounds) window.echoSounds.playListenTick();
+            return true;
+        }
+    }
+
+    acknowledgeWake() {
+        const userName = window.echoMemory ? window.echoMemory.getUserName() : "Alok";
+        const replies = [
+            `Yes, ${userName}? I'm listening.`,
+            `Online, ${userName}. What's on your mind?`,
+            `I'm here, ${userName}. Tell me what to do.`
+        ];
+        const chosen = replies[Math.floor(Math.random() * replies.length)];
+        
+        const dialogueSpeaker = document.getElementById("dialogueSpeaker");
+        const dialogueText = document.getElementById("dialogueText");
+        if (dialogueSpeaker) dialogueSpeaker.textContent = "ECHO";
+        if (dialogueText) dialogueText.textContent = chosen;
+
+        this.speak(chosen, "happy", () => {
+            // Keep command mode active for follow-up instruction
+            this.listenMode = 'command';
+            if (this.onStateChangeCallback) this.onStateChangeCallback('listening');
+        });
+    }
+
+    dispatchCommand(text) {
+        clearTimeout(this.silenceTimer);
+        this.listenMode = 'wakeword'; // Reset to background wake word mode
+        if (this.onStateChangeCallback) this.onStateChangeCallback('idle');
+
+        if (this.onTranscriptCallback) {
+            this.onTranscriptCallback(text);
         }
     }
 
@@ -171,57 +277,61 @@ class EchoVoiceEngine {
             this.currentAudioEl.pause();
             this.currentAudioEl = null;
         }
-        this.speechQueue = [];
-        this.isProcessingQueue = false;
         this.isSpeaking = false;
+        if (this.onStateChangeCallback) this.onStateChangeCallback('idle');
     }
 
-    // Select the most natural, human-sounding voice installed on the OS
+    // Select the most natural human-sounding voice available on the machine
     getBestNaturalVoice() {
         const voices = this.cachedVoices.length > 0 ? this.cachedVoices : (this.synth ? this.synth.getVoices() : []);
         if (!voices || voices.length === 0) return null;
 
-        // High priority: Neural and Natural voices in Windows/Edge/Chrome
-        const naturalPriority = [
+        // 1. First priority: High-fidelity Online Neural voices (Windows 11 / Edge / Chrome)
+        const topNeural = [
             "Microsoft Jenny Online (Natural) - English (United States)",
             "Microsoft Aria Online (Natural) - English (United States)",
             "Microsoft Guy Online (Natural) - English (United States)",
+            "Microsoft Sonia Online (Natural) - English (United Kingdom)",
+            "Microsoft Ryan Online (Natural)",
             "Google US English",
-            "Google UK English Female",
-            "Samantha",
-            "Daniel",
-            "Microsoft Zira",
-            "Microsoft David"
+            "Google UK English Female"
         ];
 
-        for (const name of naturalPriority) {
+        for (const name of topNeural) {
             const found = voices.find(v => v.name.includes(name));
             if (found) return found;
         }
 
-        // Second pass: Any voice tagged with "Natural" or "Neural"
-        const neuralVoice = voices.find(v => (v.name.includes("Natural") || v.name.includes("Neural")) && v.lang.startsWith("en"));
-        if (neuralVoice) return neuralVoice;
+        // 2. Second priority: Any voice labeled "Natural" or "Neural"
+        const naturalVoice = voices.find(v => (v.name.includes("Natural") || v.name.includes("Neural")) && v.lang.startsWith("en"));
+        if (naturalVoice) return naturalVoice;
 
-        // Third pass: Standard US/GB English voice
-        return voices.find(v => v.lang === "en-US") || voices.find(v => v.lang.startsWith("en")) || voices[0];
+        // 3. Third priority: Best available English female/male
+        const englishVoices = voices.filter(v => v.lang.startsWith("en"));
+        const humanNames = ["Jenny", "Aria", "Samantha", "Victoria", "Karen", "Daniel", "Guy", "Zira"];
+        for (const h of humanNames) {
+            const found = englishVoices.find(v => v.name.includes(h));
+            if (found) return found;
+        }
+
+        return englishVoices[0] || voices[0];
     }
 
     async speak(text, emotion = "idle", onEnd = null) {
         this.stopSpeaking();
         if (!text || !text.trim()) return;
 
-        // 1. ElevenLabs Neural Cinema Voice (If key provided)
+        // 1. Cinema ElevenLabs Voice (If API key provided)
         if (this.elevenLabsKey) {
             try {
                 await this.speakElevenLabsWithRetry(text, emotion, onEnd);
                 return;
             } catch (e) {
-                console.warn("ElevenLabs streaming failed after retries, seamlessly engaging Human Neural Browser Voice:", e);
+                console.warn("ElevenLabs streaming error, engaging human neural browser voice:", e);
             }
         }
 
-        // 2. High-Grade Human Browser Voice with Natural Conversational Cadence
+        // 2. Ultra-Smooth Human Cadence Browser Speech
         this.speakNaturalHuman(text, emotion, onEnd);
     }
 
@@ -245,11 +355,10 @@ class EchoVoiceEngine {
     async speakElevenLabs(text, emotion, onEnd) {
         const url = `https://api.elevenlabs.io/v1/text-to-speech/${this.elevenLabsVoiceId}/stream`;
 
-        // Modulate stability & similarity based on emotion
-        let stability = 0.55;
-        let similarity = 0.85;
-        if (emotion === "happy") { stability = 0.45; }
-        else if (emotion === "alert") { stability = 0.70; }
+        let stability = 0.52;
+        let similarity = 0.88;
+        if (emotion === "happy") stability = 0.45;
+        else if (emotion === "alert") stability = 0.68;
 
         const res = await fetch(url, {
             method: "POST",
@@ -261,11 +370,11 @@ class EchoVoiceEngine {
             body: JSON.stringify({
                 text: text,
                 model_id: "eleven_monolingual_v1",
-                voice_settings: { stability: stability, similarity_boost: similarity }
+                voice_settings: { stability, similarity_boost: similarity }
             })
         });
 
-        if (!res.ok) throw new Error(`ElevenLabs API returned ${res.status}`);
+        if (!res.ok) throw new Error(`ElevenLabs error: ${res.status}`);
 
         const blob = await res.blob();
         const audioUrl = URL.createObjectURL(blob);
@@ -288,16 +397,17 @@ class EchoVoiceEngine {
             URL.revokeObjectURL(audioUrl);
             if (onEnd) onEnd();
             if (this.onStateChangeCallback) this.onStateChangeCallback("idle");
+            this.scheduleRestart();
         };
 
         audio.play();
     }
 
-    // High-Grade Natural Human Cadence with Micro-Pacing
+    // Expressive Human Cadence with Micro-Intonation & Natural Breathing
     speakNaturalHuman(fullText, emotion = "idle", onEnd = null) {
         if (!this.synth) return;
 
-        // Split text into conversational thought chunks for human-like breath & cadence
+        // Split text into human thought clauses at punctuation
         const chunks = fullText.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [fullText];
         const bestVoice = this.getBestNaturalVoice();
 
@@ -310,6 +420,7 @@ class EchoVoiceEngine {
                 this.isSpeaking = false;
                 if (onEnd) onEnd();
                 if (this.onStateChangeCallback) this.onStateChangeCallback("idle");
+                this.scheduleRestart();
                 return;
             }
 
@@ -324,24 +435,25 @@ class EchoVoiceEngine {
             const utterance = new SpeechSynthesisUtterance(chunk);
             if (bestVoice) utterance.voice = bestVoice;
 
-            // Natural human prosody tuning
+            // Human intonation & prosody
+            const isQuestion = chunk.endsWith("?");
             if (emotion === "happy") {
-                utterance.pitch = 1.05;
+                utterance.pitch = isQuestion ? 1.08 : 1.04;
                 utterance.rate = 1.0;
             } else if (emotion === "alert") {
-                utterance.pitch = 1.12;
-                utterance.rate = 1.08;
+                utterance.pitch = 1.1;
+                utterance.rate = 1.06;
             } else if (emotion === "thinking") {
                 utterance.pitch = 0.98;
                 utterance.rate = 0.95;
             } else {
-                utterance.pitch = 1.0;
-                utterance.rate = 0.98; // Slightly relaxed for calm, authoritative companion
+                utterance.pitch = isQuestion ? 1.05 : 0.99;
+                utterance.rate = 0.98; // Relaxed confident conversational cadence
             }
 
             utterance.onend = () => {
-                // Natural micro-pause between thoughts (80ms)
-                setTimeout(speakNextChunk, 80);
+                // Natural 90ms human micro-pause between thought clauses
+                setTimeout(speakNextChunk, 90);
             };
 
             utterance.onerror = () => {
@@ -365,7 +477,6 @@ class EchoVoiceEngine {
             return this.audioLevel;
         }
 
-        // Organic biological pulsing when speaking
         if (this.isSpeaking) {
             return 0.38 + Math.sin(Date.now() * 0.012) * 0.22 + Math.cos(Date.now() * 0.024) * 0.1;
         }

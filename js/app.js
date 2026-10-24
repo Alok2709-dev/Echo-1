@@ -123,6 +123,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const trimmed = message.trim();
 
         displayDialogue("You", trimmed);
+        const islandTitleText = document.getElementById("islandTitleText");
+        if (islandTitleText) islandTitleText.textContent = trimmed;
         if (commandInput) commandInput.value = "";
 
         if (window.echoCore) window.echoCore.setEmotion("thinking");
@@ -137,10 +139,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 if (window.echoCore) window.echoCore.setEmotion(response.emotion);
                 displayDialogue("Echo", response.text);
+                if (islandTitleText) islandTitleText.textContent = response.text;
 
                 if (window.echoVoice) {
                     window.echoVoice.speak(response.text, response.emotion, () => {
                         if (window.echoCore) window.echoCore.setEmotion("idle");
+                        if (islandTitleText) islandTitleText.textContent = "Echo • Standing By";
                     });
                 }
             }
@@ -277,11 +281,17 @@ document.addEventListener("DOMContentLoaded", () => {
         window.echoVoice.onInterimCallback = (interim) => {
             if (dialogueSpeaker) dialogueSpeaker.textContent = "YOU (HEARING...)";
             if (dialogueText) dialogueText.textContent = interim;
+            const islandTitle = document.getElementById("islandTitleText");
+            if (islandTitle) islandTitle.textContent = interim;
         };
 
         window.echoVoice.onStateChangeCallback = (state) => {
             if (micBtn) {
                 micBtn.classList.toggle("listening", state === "listening");
+            }
+            const islandTitle = document.getElementById("islandTitleText");
+            if (islandTitle && state === "listening") {
+                islandTitle.textContent = "Echo is listening...";
             }
             if (window.echoCore) {
                 window.echoCore.setEmotion(state);

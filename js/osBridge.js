@@ -1,12 +1,11 @@
 /* ==========================================================
-   ECHO OS AUTOMATION BRIDGE
-   Bridging Web & Electron IPC for Native Desktop Automation
+   ECHO OS AUTOMATION BRIDGE (Full Windows PC Control Matrix)
 ========================================================== */
 
 class EchoOSBridge {
     constructor() {
         this.isNative = typeof window.electronAPI !== "undefined" && window.electronAPI.isElectron;
-        console.log(`[EchoOSBridge] Initialized. Native Desktop Mode: ${this.isNative}`);
+        console.log(`[EchoOSBridge] Initialized. Native Windows Mode: ${this.isNative}`);
     }
 
     async execute(command, args = "") {
@@ -21,7 +20,6 @@ class EchoOSBridge {
             }
         }
 
-        // Browser Fallback (When running directly from browser / http server)
         return this.browserFallback(cmd, args);
     }
 
@@ -34,42 +32,53 @@ class EchoOSBridge {
             window.open("spotify://", "_blank");
             return { success: true, output: "Invoked Spotify URI protocol handler." };
         }
-        if (command === "calculator") {
-            return { success: true, output: "Calculator requires Native Desktop Mode. You can ask Echo to calculate directly!" };
+        if (command === "discord") {
+            window.open("discord://", "_blank");
+            return { success: true, output: "Invoked Discord protocol." };
+        }
+        if (command === "whatsapp") {
+            window.open("https://web.whatsapp.com", "_blank");
+            return { success: true, output: "Opening WhatsApp Web." };
         }
         if (command === "screenshot") {
-            return { success: false, output: "Screenshot capture requires running in Native Electron Mode (npm start)." };
+            return { success: false, output: "Screenshot capture requires running in Native Desktop Mode (run-echo.bat)." };
         }
         if (command === "volume") {
-            return { success: false, output: "Hardware volume adjustment requires Native Electron Mode (npm start)." };
+            return { success: false, output: "System volume control requires Native Desktop Mode (run-echo.bat)." };
         }
 
         return {
             success: false,
-            output: `Native command "${command}" requires running Echo in Desktop Mode (npm start).`
+            output: `Native command "${command}" requires running Echo via run-echo.bat.`
         };
     }
 
     async openApp(appName) {
-        const map = {
-            "code": "vscode",
-            "vs code": "vscode",
-            "visual studio code": "vscode",
-            "explorer": "explorer",
-            "files": "explorer",
-            "file explorer": "explorer",
-            "notepad": "notepad",
-            "calculator": "calculator",
-            "terminal": "terminal",
-            "cmd": "terminal",
-            "powershell": "terminal",
-            "chrome": "chrome",
-            "spotify": "spotify",
-            "task manager": "taskmgr"
-        };
+        return await this.execute(appName);
+    }
 
-        const target = map[appName.toLowerCase().trim()] || appName.toLowerCase().trim();
-        return await this.execute(target);
+    async openFolder(folderName) {
+        return await this.execute(folderName);
+    }
+
+    async showDesktop() {
+        return await this.execute("show-desktop");
+    }
+
+    async closeWindow() {
+        return await this.execute("close-window");
+    }
+
+    async switchWindow() {
+        return await this.execute("switch-window");
+    }
+
+    async sleepPC() {
+        return await this.execute("sleep");
+    }
+
+    async emptyRecycleBin() {
+        return await this.execute("empty-recycle-bin");
     }
 
     async takeScreenshot() {
@@ -78,6 +87,14 @@ class EchoOSBridge {
 
     async setVolume(level) {
         return await this.execute("volume", level);
+    }
+
+    async volumeUp() {
+        return await this.execute("volume", "up");
+    }
+
+    async volumeDown() {
+        return await this.execute("volume", "down");
     }
 
     async muteVolume() {

@@ -1007,4 +1007,35 @@ body.island-mode .dynamic-island {
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* ==========================================================
+   TRANSPARENCY & DYNAMIC ISLAND ENGINE OVERRIDES
+========================================================== */
+body.electron-mode {
+    background: transparent !important;
+}
+
+body.island-mode {
+    background: transparent !important;
+    overflow: hidden !important;
+}
+
+body.island-mode #room,
+body.island-mode #loader,
+body.island-mode #auroraBorder {
+    display: none !important;
+}
+
+body.island-mode .dynamic-island {
+    display: flex !important;
+    opacity: 1 !important;
+    transform: translateX(-50%) scale(1) !important;
+}
+
+/* Dynamic Island expanded hover state */
+.dynamic-island:hover {
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85), 0 0 30px rgba(0, 229, 255, 0.35);
+    border-color: rgba(0, 229, 255, 0.4);
+}
+
+
 

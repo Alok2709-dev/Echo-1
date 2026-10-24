@@ -295,18 +295,65 @@ Example: "[happy] It's great to see you again, Alok. All neural subroutines are 
         }
 
         // ----------------------------------------------------
-        // 5. WINDOWS OS DESKTOP AUTOMATION
+        // 5. WINDOWS OS DESKTOP AUTOMATION (Full PC Control)
         // ----------------------------------------------------
+        if (lower.includes("show desktop") || lower.includes("minimize all") || lower.includes("minimize windows")) {
+            if (window.echoOSBridge) {
+                const res = await window.echoOSBridge.showDesktop();
+                return { emotion: "happy", text: res.output || "Showing your desktop." };
+            }
+        }
+
+        if (lower.includes("close window") || lower.includes("close this window") || lower.includes("close app")) {
+            if (window.echoOSBridge) {
+                const res = await window.echoOSBridge.closeWindow();
+                return { emotion: "happy", text: res.output || "Closing active window." };
+            }
+        }
+
+        if (lower.includes("switch window") || lower.includes("next window") || lower.includes("switch app")) {
+            if (window.echoOSBridge) {
+                const res = await window.echoOSBridge.switchWindow();
+                return { emotion: "happy", text: res.output || "Switched to previous window." };
+            }
+        }
+
+        if (lower.includes("empty recycle bin") || lower.includes("clean recycle bin")) {
+            if (window.echoOSBridge) {
+                const res = await window.echoOSBridge.emptyRecycleBin();
+                return { emotion: "happy", text: res.output || "Recycle bin emptied." };
+            }
+        }
+
+        if (lower.includes("sleep pc") || lower.includes("sleep computer") || lower.includes("put computer to sleep")) {
+            if (window.echoOSBridge) {
+                await window.echoOSBridge.sleepPC();
+                return { emotion: "idle", text: "Putting workstation into sleep mode." };
+            }
+        }
+
+        if (lower.includes("volume up") || lower.includes("increase volume") || lower.includes("awaz badhao")) {
+            if (window.echoOSBridge) {
+                const res = await window.echoOSBridge.volumeUp();
+                return { emotion: "happy", text: res.output || "Volume increased." };
+            }
+        }
+
+        if (lower.includes("volume down") || lower.includes("decrease volume") || lower.includes("awaz kam karo")) {
+            if (window.echoOSBridge) {
+                const res = await window.echoOSBridge.volumeDown();
+                return { emotion: "happy", text: res.output || "Volume decreased." };
+            }
+        }
+
         if (lower.startsWith("open ") || lower.startsWith("launch ") || lower.startsWith("start ")) {
             const targetApp = lower.replace(/^(open|launch|start)\s+/i, "").trim();
-            const appKeywords = ["vscode", "vs code", "visual studio code", "code", "explorer", "file explorer", "files", "notepad", "calculator", "terminal", "powershell", "cmd", "chrome", "spotify", "task manager"];
-            const matched = appKeywords.find(k => targetApp === k || targetApp.includes(k));
 
-            if (matched && window.echoOSBridge) {
-                const res = await window.echoOSBridge.openApp(matched);
+            if (window.echoOSBridge) {
+                const res = await window.echoOSBridge.openApp(targetApp);
                 return {
                     emotion: res.success ? "happy" : "thinking",
-                    text: res.success ? `Launching ${matched.toUpperCase()} now.` : (res.output || res.error)
+                    text: res.output || (res.success ? `Launching ${targetApp}.` : res.error)
                 };
             }
         }
@@ -321,7 +368,7 @@ Example: "[happy] It's great to see you again, Alok. All neural subroutines are 
             }
         }
 
-        if (lower.includes("mute") || lower.includes("unmute audio") || lower.includes("mute volume")) {
+        if (lower.includes("mute") || lower.includes("unmute audio") || lower.includes("mute volume") || lower.includes("awaz band")) {
             if (window.echoOSBridge) {
                 const res = await window.echoOSBridge.muteVolume();
                 return {
@@ -341,7 +388,7 @@ Example: "[happy] It's great to see you again, Alok. All neural subroutines are 
             };
         }
 
-        if (lower.includes("system status") || lower.includes("check performance") || lower.includes("cpu usage") || lower.includes("ram usage") || lower.includes("system telemetry")) {
+        if (lower.includes("system status") || lower.includes("check performance") || lower.includes("cpu usage") || lower.includes("ram usage") || lower.includes("system telemetry") || lower.includes("storage")) {
             if (window.echoOSBridge) {
                 const res = await window.echoOSBridge.getSystemStatus();
                 return {

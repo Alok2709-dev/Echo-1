@@ -1,4 +1,4 @@
-const { app, BrowserWindow, globalShortcut, ipcMain, Tray, Menu, screen, desktopCapturer } = require('electron');
+const { app, BrowserWindow, globalShortcut, ipcMain, Tray, Menu, screen } = require('electron');
 const path = require('path');
 const { exec } = require('child_process');
 const fs = require('fs');
@@ -64,12 +64,9 @@ function createWindow() {
 function createTray() {
     if (tray) return;
 
-    // Use native tray icon or transparent fallback
     try {
         const iconPath = path.join(__dirname, 'icon.png');
-        // If no icon file exists, create a minimal 16x16 icon in memory or use fallback
         if (!fs.existsSync(iconPath)) {
-            // Write a tiny 1x1 png as fallback if not present
             const fallbackBuf = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
             fs.writeFileSync(iconPath, fallbackBuf);
         }
@@ -83,7 +80,7 @@ function createTray() {
                 click: () => toggleWindow()
             },
             {
-                label: 'Dynamic Island Pill Mode',
+                label: 'Toggle Dynamic Island Mode',
                 click: () => setWindowMode(currentMode === 'island' ? 'full' : 'island')
             },
             {
@@ -133,10 +130,10 @@ function setWindowMode(mode) {
 
     currentMode = mode;
     if (mode === 'island') {
-        const islandWidth = 460;
+        const islandWidth = 480;
         const islandHeight = 64;
         const islandX = Math.round((width - islandWidth) / 2);
-        mainWindow.setAlwaysOnTop(true, 'screen-saver');
+        mainWindow.setAlwaysOnTop(true);
         mainWindow.setBounds({ x: islandX, y: 16, width: islandWidth, height: islandHeight }, true);
     } else {
         const fullW = Math.min(1380, width - 60);
@@ -166,7 +163,7 @@ ipcMain.handle('window:maximize', () => {
 });
 
 ipcMain.handle('window:close', () => {
-    if (mainWindow) mainWindow.hide(); // Minimize to background permanent tray!
+    if (mainWindow) mainWindow.hide();
 });
 
 ipcMain.handle('window:toggle', () => {
@@ -210,7 +207,7 @@ ipcMain.handle('screen:capture', async () => {
                 try {
                     const data = fs.readFileSync(filePath);
                     const base64 = data.toString('base64');
-                    fs.unlink(filePath, () => {}); // clean temp
+                    fs.unlink(filePath, () => {});
                     resolve({ success: true, base64: `data:image/png;base64,${base64}` });
                 } catch (readErr) {
                     resolve({ success: false, error: readErr.message });
@@ -220,23 +217,68 @@ ipcMain.handle('screen:capture', async () => {
     });
 });
 
-// OS Automation Execution Handlers
+// Full Windows PC Automation Matrix
 ipcMain.handle('os:execute', async (event, { command, args }) => {
     return new Promise((resolve) => {
-        const allowedCommands = {
+        const target = command.toLowerCase().trim();
+
+        // 1. Applications & Protocol Map
+        const appMap = {
             'vscode': 'code',
             'code': 'code',
             'explorer': 'explorer',
+            'files': 'explorer',
             'notepad': 'notepad',
             'calculator': 'calc',
+            'calc': 'calc',
             'terminal': 'wt || powershell',
+            'powershell': 'powershell',
+            'cmd': 'cmd',
             'chrome': 'start chrome',
             'spotify': 'start spotify',
-            'taskmgr': 'taskmgr'
+            'taskmgr': 'taskmgr',
+            'task manager': 'taskmgr',
+            'paint': 'mspaint',
+            'settings': 'start ms-settings:',
+            'control panel': 'control',
+            'discord': 'start discord:// || start https://discord.com',
+            'steam': 'start steam://',
+            'whatsapp': 'start whatsapp:// || start https://web.whatsapp.com',
+            'word': 'start winword',
+            'excel': 'start excel',
+            'powerpoint': 'start powerpnt',
+            'edge': 'start msedge',
+            'brave': 'start brave'
         };
 
-        const target = command.toLowerCase().trim();
+        // 2. Folder Shell Targets
+        const folderMap = {
+            'downloads': 'start shell:Downloads',
+            'desktop': 'start shell:Desktop',
+            'documents': 'start shell:Personal',
+            'pictures': 'start shell:My Pictures',
+            'music': 'start shell:My Music',
+            'c drive': 'explorer C:\\',
+            'recycle bin': 'start shell:RecycleBinFolder'
+        };
 
+        if (folderMap[target]) {
+            exec(folderMap[target], (err) => {
+                if (err) resolve({ success: false, error: err.message });
+                else resolve({ success: true, output: `Opened ${target} folder.` });
+            });
+            return;
+        }
+
+        if (appMap[target]) {
+            exec(`start "" ${appMap[target]}`, (err) => {
+                if (err) resolve({ success: false, error: err.message });
+                else resolve({ success: true, output: `Launched ${target}.` });
+            });
+            return;
+        }
+
+        // 3. Screenshot Capture
         if (target === 'screenshot') {
             const timestamp = Date.now();
             const filePath = path.join(app.getPath('pictures'), `Echo_Capture_${timestamp}.png`);
@@ -256,13 +298,28 @@ ipcMain.handle('os:execute', async (event, { command, args }) => {
                 if (err) {
                     resolve({ success: false, error: stderr || err.message });
                 } else {
-                    resolve({ success: true, output: `Screenshot saved to Pictures: Echo_Capture_${timestamp}.png`, path: filePath });
+                    resolve({ success: true, output: `Screenshot saved to Pictures folder: Echo_Capture_${timestamp}.png`, path: filePath });
                 }
             });
             return;
         }
 
+        // 4. Volume Adjustment
         if (target === 'volume') {
+            if (args === 'up') {
+                const vScript = `$obj = New-Object -ComObject WScript.Shell; 1..5 | ForEach-Object { $obj.SendKeys([char]175) }`;
+                exec(`powershell -NoProfile -Command "${vScript}"`, () => resolve({ success: true, output: "Master volume increased." }));
+                return;
+            } else if (args === 'down') {
+                const vScript = `$obj = New-Object -ComObject WScript.Shell; 1..5 | ForEach-Object { $obj.SendKeys([char]174) }`;
+                exec(`powershell -NoProfile -Command "${vScript}"`, () => resolve({ success: true, output: "Master volume decreased." }));
+                return;
+            } else if (args === 'mute') {
+                const muteScript = `$wsh = New-Object -ComObject WScript.Shell; $wsh.SendKeys([char]173)`;
+                exec(`powershell -NoProfile -Command "${muteScript}"`, () => resolve({ success: true, output: "Audio output toggled / muted." }));
+                return;
+            }
+
             const level = parseInt(args, 10);
             if (!isNaN(level)) {
                 const vScript = `
@@ -273,34 +330,35 @@ ipcMain.handle('os:execute', async (event, { command, args }) => {
                 `;
                 exec(`powershell -NoProfile -Command "${vScript.replace(/\n/g, ';')}"`, (err) => {
                     if (err) resolve({ success: false, error: err.message });
-                    else resolve({ success: true, output: `Master volume calibrated to ${level}%.` });
-                });
-                return;
-            } else if (args === 'mute') {
-                const muteScript = `$wsh = New-Object -ComObject WScript.Shell; $wsh.SendKeys([char]173)`;
-                exec(`powershell -NoProfile -Command "${muteScript}"`, () => {
-                    resolve({ success: true, output: "Audio output toggled / muted." });
+                    else resolve({ success: true, output: `Volume set to ${level}%.` });
                 });
                 return;
             }
         }
 
-        if (target === 'status' || target === 'system-info') {
-            const statusScript = `
-                $os = Get-CimInstance Win32_OperatingSystem
-                $freeMem = [math]::Round($os.FreePhysicalMemory / 1024, 0)
-                $totalMem = [math]::Round($os.TotalVisibleMemorySize / 1024, 0)
-                $usedMem = $totalMem - $freeMem
-                $cpu = (Get-CimInstance Win32_Processor).LoadPercentage
-                echo "$usedMem MB used of $totalMem MB | CPU Load: $cpu%"
-            `;
-            exec(`powershell -NoProfile -Command "${statusScript.replace(/\n/g, ';')}"`, (err, stdout) => {
-                if (err) resolve({ success: false, error: err.message });
-                else resolve({ success: true, output: stdout.trim() });
+        // 5. Windows Management (Show Desktop, Close Window, Switch Window)
+        if (target === 'show-desktop' || target === 'minimize-all') {
+            exec(`powershell -NoProfile -Command "(New-Object -ComObject Shell.Application).MinimizeAll()"`, () => {
+                resolve({ success: true, output: "Minimized all windows and showing desktop." });
             });
             return;
         }
 
+        if (target === 'close-window') {
+            exec(`powershell -NoProfile -Command "$wsh = New-Object -ComObject WScript.Shell; $wsh.SendKeys('%{F4}')"`, () => {
+                resolve({ success: true, output: "Closed active window." });
+            });
+            return;
+        }
+
+        if (target === 'switch-window') {
+            exec(`powershell -NoProfile -Command "$wsh = New-Object -ComObject WScript.Shell; $wsh.SendKeys('%{TAB}')"`, () => {
+                resolve({ success: true, output: "Switched to previous window." });
+            });
+            return;
+        }
+
+        // 6. Workstation Security & Power
         if (target === 'lock') {
             exec('rundll32.exe user32.dll,LockWorkStation', (err) => {
                 if (err) resolve({ success: false, error: err.message });
@@ -309,15 +367,48 @@ ipcMain.handle('os:execute', async (event, { command, args }) => {
             return;
         }
 
-        if (allowedCommands[target]) {
-            exec(`start "" ${allowedCommands[target]}`, (err) => {
+        if (target === 'sleep') {
+            exec('rundll32.exe powrprof.dll,SetSuspendState 0,1,0', (err) => {
                 if (err) resolve({ success: false, error: err.message });
-                else resolve({ success: true, output: `Application launched: ${target}.` });
+                else resolve({ success: true, output: "Putting workstation to sleep." });
             });
             return;
         }
 
-        resolve({ success: false, error: `Command "${command}" is not in the authorized automation list.` });
+        if (target === 'empty-recycle-bin') {
+            exec('powershell -NoProfile -Command "Clear-RecycleBin -Force -ErrorAction SilentlyContinue"', () => {
+                resolve({ success: true, output: "Recycle Bin emptied." });
+            });
+            return;
+        }
+
+        // 7. System Hardware Telemetry
+        if (target === 'status' || target === 'system-info') {
+            const statusScript = `
+                $os = Get-CimInstance Win32_OperatingSystem
+                $freeMem = [math]::Round($os.FreePhysicalMemory / 1024, 0)
+                $totalMem = [math]::Round($os.TotalVisibleMemorySize / 1024, 0)
+                $usedMem = $totalMem - $freeMem
+                $cpu = (Get-CimInstance Win32_Processor).LoadPercentage
+                $disk = Get-PSDrive C
+                $freeDisk = [math]::Round($disk.Free / 1GB, 1)
+                echo "$usedMem MB used of $totalMem MB RAM | CPU Load: $cpu% | C Drive Free: $freeDisk GB"
+            `;
+            exec(`powershell -NoProfile -Command "${statusScript.replace(/\n/g, ';')}"`, (err, stdout) => {
+                if (err) resolve({ success: false, error: err.message });
+                else resolve({ success: true, output: stdout.trim() });
+            });
+            return;
+        }
+
+        // 8. Universal App Launcher fallback (Attempts to launch any application requested)
+        exec(`start "" "${command}"`, (err) => {
+            if (err) {
+                resolve({ success: false, error: `Could not launch "${command}". Make sure the application is installed.` });
+            } else {
+                resolve({ success: true, output: `Launched ${command}.` });
+            }
+        });
     });
 });
 
