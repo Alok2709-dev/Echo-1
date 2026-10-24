@@ -1,42 +1,60 @@
-const messages = [
+/* ==========================================================
+   ECHO — BOOT LOADER & SYSTEM INITIALIZER
+========================================================== */
 
-    "Initializing...",
-
-    "Loading Memory...",
-
-    "Loading Voice Engine...",
-
-    "Loading Neural Core...",
-
-    "Loading Consciousness..."
-
+const bootMessages = [
+    "Initializing Neural Lattice...",
+    "Harmonizing Quantum Audio Engine...",
+    "Syncing Memory Core...",
+    "Awakening Sentient Consciousness..."
 ];
 
-const status = document.getElementById("status");
+const statusEl = document.getElementById("status");
+let bootIndex = 0;
 
-let current = 0;
-
-const interval = setInterval(()=>{
-
-    current++;
-
-    if(current < messages.length){
-
-        status.textContent = messages[current];
-
+const bootInterval = setInterval(() => {
+    bootIndex++;
+    if (bootIndex < bootMessages.length && statusEl) {
+        statusEl.textContent = bootMessages[bootIndex];
     }
+}, 600);
 
-},1200);
+let hasBooted = false;
 
+function finishBoot() {
+    if (hasBooted) return;
+    hasBooted = true;
+    clearInterval(bootInterval);
 
-// Boot Finished
+    const loader = document.getElementById("loader");
+    const room = document.getElementById("room");
 
-setTimeout(()=>{
+    if (loader) loader.classList.add("loaderHide");
+    if (room) room.classList.remove("hidden");
 
-    clearInterval(interval);
+    // Trigger Echo's voice and welcome sequence
+    setTimeout(() => {
+        if (typeof window.activateEcho === "function") {
+            window.activateEcho();
+        }
+    }, 400);
+}
 
-    document.getElementById("loader").classList.add("loaderHide");
+// Snappy auto-finish after 2.6 seconds
+const autoBootTimer = setTimeout(finishBoot, 2600);
 
-    document.getElementById("room").classList.remove("hidden");
+// Immediate skip on click or keypress
+const loaderElement = document.getElementById("loader");
+if (loaderElement) {
+    loaderElement.addEventListener("click", () => {
+        clearTimeout(autoBootTimer);
+        finishBoot();
+    });
+}
 
-},6500);
+document.addEventListener("keydown", (e) => {
+    if (!hasBooted && (e.key === "Enter" || e.key === " " || e.key === "Escape")) {
+        clearTimeout(autoBootTimer);
+        finishBoot();
+    }
+});
