@@ -1,64 +1,57 @@
-# ECHO — Sentient AI Companion
+# ECHO v2.5 — Sentient AI Companion
 
-An advanced, atmospheric, emotionally-sentient AI companion interface featuring a real-time reactive holographic core, voice recognition, speech synthesis, persistent personal memory, and dynamic emotion states.
-
----
-
-## 🌟 Key Features
-
-### 1. Dynamic Reactive Holographic Core
-- **Multi-Ring Sci-Fi HUD**: Built with 2D Canvas and Three.js 3D ethereal wireframe particle clouds.
-- **Emotion Color Shifting**: Smoothly transitions between emotional states:
-  - 💠 **Idle**: Calm Cyber Cyan (`#00e5ff`)
-  - 🌊 **Listening**: Electric Teal (`#00ffcc`)
-  - 🔮 **Thinking**: Neural Violet (`#b388ff`)
-  - ⚡ **Speaking**: Warm Golden Amber (`#ffab40`)
-  - 🌿 **Happy / Joy**: Neon Emerald (`#00e676`)
-  - 🚨 **Alert / Warning**: Crimson Warning (`#ff3d00`)
-- **Audio Frequency Reactivity**: The core's rings and central orb physically pulse and expand to the exact audio waveform of your voice and Echo's synthetic speech via the Web Audio API.
-
-### 2. Voice & Speech Synthesis Engine
-- **Voice Hearing (STT)**: Click the glowing mic button or hold/press **Spacebar** to speak.
-- **Voice Speech (TTS)**: Echo speaks back using tuned natural speech synthesis with emotion-based pitch modulation.
-- **Live HUD Subtitles**: Real-time typewriter effect dialogue box with speaker identification.
-
-### 3. Personal Knowledge & Memory Matrix
-- **Persistent User Profile**: Remembers your name, preferences, traits, and interactions.
-- **Fact Retention**: Say *"Remember that I love sci-fi"* or *"Remember that my project deadline is Friday"*, and Echo permanently stores it into its neural memory bank.
-- **Memory Inspection HUD**: Click the **Memory** button in the top HUD to view, manage, or delete stored memories.
-
-### 4. Smart Productivity & Local Intelligence
-- **Scheduled Timers & Alerts**: *"Remind me to drink water in 5 minutes"* — Echo sets an internal timer and triggers a speech/visual alert when due.
-- **Math & Computations**: *"Calculate 25 * 14"*, *"What is 1500 / 3?"*
-- **Time & Date Awareness**: *"What time is it?"*, *"What day is today?"*
-- **Quick Web Links**: *"Search quantum computing"*, *"Open YouTube"*, *"Open GitHub"*.
-- **Optional Gemini API Key**: Click **Settings** in the HUD to enter an optional Google Gemini API key for unlimited multi-turn deep reasoning!
+An advanced, atmospheric, emotionally-sentient AI companion interface featuring an organic living fluid orb, audio reactive waveforms, ambient music deck, live control center (weather, calendar, tasks), proactive JARVIS behavior, and neural voice.
 
 ---
 
-## 🚀 How to Run Locally
+## 🌟 Complete Feature Matrix
 
-You don't need any complex build tools. Echo runs directly in any modern web browser:
+### 1. 🌊 Fluid Living Orb (Apple Intelligence Inspired)
+- **Organic Parametric Plasma**: Multi-layer breathing plasma core with harmonic wave deform.
+- **Stardust Light Motes**: 90+ particles orbiting with dynamic physics, drawn toward mouse cursor.
+- **Apple Aurora Screen Glow**: Shimmering iridescent screen edge illumination active during speech, listening, and alerts.
+- **Dynamic Emotion States**:
+  - 💠 **Serene**: Electric Cyan (`#00e5ff`)
+  - 🌊 **Listening**: Fluorescent Teal (`#00ffcc`)
+  - 🔮 **Thinking**: Deep Amethyst Violet (`#a855f7`)
+  - ⚡ **Speaking**: Solar Amber & Coral (`#ffab40`)
+  - 🌿 **Euphoria / Joy**: Neon Emerald (`#10b981`)
+  - 🚨 **Alert**: Supernova Crimson (`#ef4444`)
 
-1. **Option 1 (Direct)**: Double-click `index.html` or drag it into Google Chrome, Microsoft Edge, or Brave.
-2. **Option 2 (Live Server)**:
-   ```bash
-   # Using Python:
-   python -m http.server 8080
+### 2. 🎵 Ambient Music & Soundscape Deck
+- **Zero-Dependency Procedural Audio**: Generates high-quality soundscapes directly via the Web Audio API without downloading external audio files.
+  - *Cyberpunk Rainscape* (Atmospheric rain + sub-bass warm pad)
+  - *Cosmic Neural Drone* (Dual-frequency binaural focus drone)
+  - *Starlight Synthesizer* (Lofi chill ambient chords)
+- **Voice Commands**: *"Play music"*, *"Play rain"*, *"Next track"*, *"Pause music"*.
+- Floating Apple Music-style glass capsule in the bottom-left corner with rotating vinyl disc and live waveform ripple.
 
-   # Or using VS Code / Antigravity Live Server extension.
-   ```
-   Then open `http://localhost:8080` in your browser.
+### 3. 📊 Control Center Slide-out Dashboard
+- **Live Telemetry Weather**: Real-time temperature, condition, humidity, and wind speed (powered by Open-Meteo, zero setup/API key required).
+- **Daily Agenda & Calendar**: Visual schedule timeline. Add events via voice (*"Schedule meeting at 3 PM team sync"*).
+- **Neural Task Matrix**: Check off tasks with smooth haptic feedback, or add tasks via voice (*"Add task finish UI"*).
+
+### 4. 🧠 Proactive JARVIS Engine
+- **Time-Aware Conversational Greetings**: Morning, afternoon, evening, and late-night contextual intelligence.
+- **Autonomous Wellness & Focus**: Checks in gently after uninterrupted sessions, suggesting ambient soundscapes or posture breaks.
+- **Living Idle Breathing**: Subtly shifts energy and hue when idle to feel alive.
+
+### 5. 🎙️ Neural Voice & Speech
+- **Microphone Hearing**: Click the mic or press **Spacebar** to speak.
+- **Synthesized Voice**: Dynamic pitch/speed inflection based on emotion.
+- **Optional ElevenLabs Neural Voice**: Enter an ElevenLabs API key in **Settings** for cinema-grade human voices (Rachel, Domi, Bella, Antoni).
+- **Optional Google Gemini API**: Enter a Gemini key in **Settings** for deep multi-turn generative conversation.
 
 ---
 
-## ⌨️ Controls & Shortcuts
+## ⌨️ Quick Controls & Shortcuts
 
 | Action | Control |
 | :--- | :--- |
-| **Speak to Echo** | Click the **Mic** button or press **Spacebar** |
-| **Transmit Command** | Press **Enter** in the command bar or click **Send** |
-| **Skip Boot Animation** | Click anywhere during the initial loading screen |
-| **Inspect Stored Memories** | Click **Memory** in the top navigation bar |
-| **Configure Gemini Key** | Click **Settings** in the top navigation bar |
-| **Manual Emotion Test** | Click the emotion pills on the right side of the screen |
+| **Speak to Echo** | Click **Mic** or press **Spacebar** |
+| **Transmit Command** | Press **Enter** in command bar or click **Send** |
+| **Toggle Control Center** | Click **Dashboard** in top bar |
+| **Play/Pause Ambient Music** | Click Play on the bottom-left deck |
+| **Inspect Stored Memories** | Click **Memory** in top bar |
+| **Configure API Keys** | Click **Settings** in top bar |
+| **Skip Boot Animation** | Click or press Spacebar on the loader screen |
