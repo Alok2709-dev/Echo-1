@@ -1,17 +1,22 @@
-const { app, BrowserWindow, globalShortcut, ipcMain, Tray, Menu, screen, clipboard } = require('electron');
+const { app, BrowserWindow, globalShortcut, ipcMain, Tray, Menu, screen, clipboard, shell } = require('electron');
 const path = require('path');
-const { exec } = require('child_process');
+const { exec, spawn } = require('child_process');
 const fs = require('fs');
+const http = require('http');
 
 // Enable Speech and Audio permissions for Electron
 app.commandLine.appendSwitch('enable-speech-dispatcher');
 app.commandLine.appendSwitch('use-fake-ui-for-media-stream');
 app.commandLine.appendSwitch('enable-features', 'SpeechRecognition,MediaStreamTrack');
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 
 let mainWindow = null;
 let tray = null;
 let currentMode = 'full'; // 'full' or 'island'
 let isQuitting = false;
+let voiceBridgeServer = null;
+let voiceEarProcess = null;
+let voiceBridgePort = 0;
 
 function createWindow() {
     const primaryDisplay = screen.getPrimaryDisplay();
@@ -195,28 +200,61 @@ ipcMain.handle('app:get-startup', () => {
     return app.getLoginItemSettings().openAtLogin;
 });
 
+// Smart Universal Windows Path Resolver (Handles fuzzy folder names like 'alods', 'alok', 'desktop', etc.)
+function resolveSmartPath(rawPath) {
+    if (!rawPath) return app.getPath('desktop');
+    let p = rawPath.trim().replace(/^["']|["']$/g, '');
+    const homeDir = app.getPath('home');
+    const desktopDir = app.getPath('desktop');
+
+    // Split initial segment to test known shortcuts
+    const normalized = p.replace(/\\/g, '/');
+    const parts = normalized.split('/');
+    const firstSegment = parts[0].toLowerCase();
+
+    const specialDirs = {
+        'desktop': desktopDir,
+        'downloads': app.getPath('downloads'),
+        'documents': app.getPath('documents'),
+        'docs': app.getPath('documents'),
+        'pictures': app.getPath('pictures'),
+        'pics': app.getPath('pictures'),
+        'music': app.getPath('music'),
+        'home': homeDir,
+        'user': homeDir,
+        'alok': path.join(desktopDir, 'alok'),
+        'aloks': homeDir,
+        'alods': path.join(desktopDir, 'alods')
+    };
+
+    if (specialDirs[firstSegment]) {
+        const sub = parts.slice(1).join(path.sep);
+        return sub ? path.join(specialDirs[firstSegment], sub) : specialDirs[firstSegment];
+    }
+
+    if (path.isAbsolute(p)) {
+        return p;
+    }
+
+    // Default relative paths to Desktop
+    return path.join(desktopDir, p);
+}
+
 // Real Windows File System & Directory Operations
 ipcMain.handle('fs:create-file', async (event, { filePath, content }) => {
     try {
-        let resolved = filePath.trim();
-        // Resolve common user locations
-        if (resolved.toLowerCase().startsWith('desktop\\') || resolved.toLowerCase().startsWith('desktop/')) {
-            resolved = path.join(app.getPath('desktop'), resolved.substring(8));
-        } else if (resolved.toLowerCase().startsWith('downloads\\') || resolved.toLowerCase().startsWith('downloads/')) {
-            resolved = path.join(app.getPath('downloads'), resolved.substring(10));
-        } else if (resolved.toLowerCase().startsWith('documents\\') || resolved.toLowerCase().startsWith('documents/')) {
-            resolved = path.join(app.getPath('documents'), resolved.substring(10));
-        } else if (!path.isAbsolute(resolved)) {
-            resolved = path.join(app.getPath('desktop'), resolved);
-        }
-
+        const resolved = resolveSmartPath(filePath);
         const parentDir = path.dirname(resolved);
         if (!fs.existsSync(parentDir)) {
             fs.mkdirSync(parentDir, { recursive: true });
         }
 
         fs.writeFileSync(resolved, content || '', 'utf8');
-        return { success: true, path: resolved, message: `File created successfully at ${resolved}` };
+        return {
+            success: true,
+            path: resolved,
+            message: `File created successfully: ${path.basename(resolved)} in ${parentDir}`
+        };
     } catch (e) {
         return { success: false, error: e.message };
     }
@@ -224,19 +262,13 @@ ipcMain.handle('fs:create-file', async (event, { filePath, content }) => {
 
 ipcMain.handle('fs:create-folder', async (event, { folderPath }) => {
     try {
-        let resolved = folderPath.trim();
-        if (resolved.toLowerCase().startsWith('desktop\\') || resolved.toLowerCase().startsWith('desktop/')) {
-            resolved = path.join(app.getPath('desktop'), resolved.substring(8));
-        } else if (resolved.toLowerCase().startsWith('downloads\\') || resolved.toLowerCase().startsWith('downloads/')) {
-            resolved = path.join(app.getPath('downloads'), resolved.substring(10));
-        } else if (resolved.toLowerCase().startsWith('documents\\') || resolved.toLowerCase().startsWith('documents/')) {
-            resolved = path.join(app.getPath('documents'), resolved.substring(10));
-        } else if (!path.isAbsolute(resolved)) {
-            resolved = path.join(app.getPath('desktop'), resolved);
-        }
-
+        const resolved = resolveSmartPath(folderPath);
         fs.mkdirSync(resolved, { recursive: true });
-        return { success: true, path: resolved, message: `Folder created successfully at ${resolved}` };
+        return {
+            success: true,
+            path: resolved,
+            message: `Folder created successfully: ${path.basename(resolved)} at ${resolved}`
+        };
     } catch (e) {
         return { success: false, error: e.message };
     }
@@ -244,8 +276,10 @@ ipcMain.handle('fs:create-folder', async (event, { folderPath }) => {
 
 ipcMain.handle('fs:read-file', async (event, { filePath }) => {
     try {
-        let resolved = filePath.trim();
-        if (!path.isAbsolute(resolved)) resolved = path.join(app.getPath('desktop'), resolved);
+        const resolved = resolveSmartPath(filePath);
+        if (!fs.existsSync(resolved)) {
+            return { success: false, error: `File not found at ${resolved}` };
+        }
         const data = fs.readFileSync(resolved, 'utf8');
         return { success: true, content: data, path: resolved };
     } catch (e) {
@@ -255,13 +289,38 @@ ipcMain.handle('fs:read-file', async (event, { filePath }) => {
 
 ipcMain.handle('fs:list-files', async (event, { folderPath }) => {
     try {
-        let resolved = folderPath ? folderPath.trim() : 'desktop';
-        if (resolved.toLowerCase() === 'desktop') resolved = app.getPath('desktop');
-        else if (resolved.toLowerCase() === 'downloads') resolved = app.getPath('downloads');
-        else if (resolved.toLowerCase() === 'documents') resolved = app.getPath('documents');
-
+        const resolved = resolveSmartPath(folderPath || 'desktop');
+        if (!fs.existsSync(resolved)) {
+            return { success: false, error: `Directory does not exist: ${resolved}` };
+        }
         const files = fs.readdirSync(resolved);
-        return { success: true, files: files.slice(0, 25), path: resolved };
+        return { success: true, files: files.slice(0, 30), path: resolved };
+    } catch (e) {
+        return { success: false, error: e.message };
+    }
+});
+
+ipcMain.handle('fs:open-file', async (event, { filePath }) => {
+    try {
+        const resolved = resolveSmartPath(filePath);
+        if (fs.existsSync(resolved)) {
+            shell.openPath(resolved);
+            return { success: true, message: `Opened ${path.basename(resolved)}` };
+        }
+        return { success: false, error: `File not found: ${resolved}` };
+    } catch (e) {
+        return { success: false, error: e.message };
+    }
+});
+
+ipcMain.handle('fs:reveal-file', async (event, { filePath }) => {
+    try {
+        const resolved = resolveSmartPath(filePath);
+        if (fs.existsSync(resolved)) {
+            shell.showItemInFolder(resolved);
+            return { success: true, message: `Revealed in Windows Explorer.` };
+        }
+        return { success: false, error: `Path not found: ${resolved}` };
     } catch (e) {
         return { success: false, error: e.message };
     }
@@ -511,8 +570,148 @@ ipcMain.handle('os:execute', async (event, { command, args }) => {
     });
 });
 
+// Native Windows Speech Recognition Ear Bridge (Connects via Edge/Chrome Offline Speech Engine)
+function startVoiceBridge() {
+    try {
+        voiceBridgeServer = http.createServer((req, res) => {
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+            res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+            if (req.method === 'OPTIONS') {
+                res.writeHead(204);
+                res.end();
+                return;
+            }
+
+            if (req.url === '/speech-bridge') {
+                res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+                res.end(`<!DOCTYPE html>
+<html>
+<head><title>Echo Voice Bridge</title></head>
+<body style="background:#09090e;color:#00e5ff;font-family:sans-serif;padding:24px;">
+  <h2>Echo Neural Speech Ear Active</h2>
+  <div id="status" style="color:#aaa;">Calibrating Windows Audio Subsystem...</div>
+  <div id="heard" style="margin-top:16px;font-size:20px;font-weight:bold;"></div>
+  <script>
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRec) {
+        document.getElementById('status').textContent = 'Web Speech unavailable in host binary.';
+    } else {
+        const rec = new SpeechRec();
+        rec.continuous = true;
+        rec.interimResults = true;
+        rec.lang = 'en-US';
+
+        rec.onstart = () => {
+            document.getElementById('status').textContent = 'EAR ONLINE: Continuously listening for "Hey Echo" and commands...';
+        };
+
+        rec.onresult = (e) => {
+            let interim = '';
+            let finalStr = '';
+            for (let i = e.resultIndex; i < e.results.length; i++) {
+                const text = e.results[i][0].transcript;
+                if (e.results[i].isFinal) finalStr += text;
+                else interim += text;
+            }
+            const active = (finalStr || interim).trim();
+            if (active) {
+                document.getElementById('heard').textContent = active;
+                fetch('/voice-data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ final: finalStr.trim(), interim: interim.trim() })
+                }).catch(() => {});
+            }
+        };
+
+        rec.onerror = (e) => {
+            document.getElementById('status').textContent = 'Speech status: ' + e.error;
+            setTimeout(() => { try { rec.start(); } catch(err){} }, 1000);
+        };
+
+        rec.onend = () => {
+            setTimeout(() => { try { rec.start(); } catch(err){} }, 500);
+        };
+
+        try { rec.start(); } catch(e){}
+    }
+  </script>
+</body>
+</html>`);
+                return;
+            }
+
+            if (req.url === '/voice-data' && req.method === 'POST') {
+                let body = '';
+                req.on('data', chunk => { body += chunk; });
+                req.on('end', () => {
+                    try {
+                        const data = JSON.parse(body);
+                        if (mainWindow && !mainWindow.isDestroyed()) {
+                            mainWindow.webContents.send('voice:native-transcript', data);
+                        }
+                    } catch (e) {}
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ ok: true }));
+                });
+                return;
+            }
+
+            res.writeHead(404);
+            res.end();
+        });
+
+        voiceBridgeServer.listen(0, '127.0.0.1', () => {
+            voiceBridgePort = voiceBridgeServer.address().port;
+            console.log(`[Echo] Native voice bridge listening on http://127.0.0.1:${voiceBridgePort}`);
+            launchVoiceEar(voiceBridgePort);
+        });
+    } catch (e) {
+        console.warn('Could not initialize native voice bridge:', e);
+    }
+}
+
+function launchVoiceEar(port) {
+    const candidatePaths = [
+        'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+        'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+        'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+        'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'
+    ];
+    const binary = candidatePaths.find(p => fs.existsSync(p));
+    if (!binary) {
+        console.warn('[Echo] No Edge or Chrome found for background speech ear.');
+        return;
+    }
+
+    const earArgs = [
+        `--app=http://127.0.0.1:${port}/speech-bridge`,
+        '--window-size=1,1',
+        '--window-position=-3500,-3500',
+        '--use-fake-ui-for-media-stream',
+        '--autoplay-policy=no-user-gesture-required',
+        '--disable-features=Translate',
+        '--no-first-run',
+        '--no-default-browser-check'
+    ];
+
+    try {
+        voiceEarProcess = spawn(binary, earArgs, {
+            detached: false,
+            stdio: 'ignore'
+        });
+        voiceEarProcess.on('error', (err) => console.warn('[Echo] Voice ear error:', err));
+        console.log('[Echo] Native Windows Voice Ear launched successfully via', path.basename(binary));
+    } catch (e) {
+        console.warn('[Echo] Failed to spawn voice ear:', e);
+    }
+}
+
 app.whenReady().then(() => {
     createWindow();
+    startVoiceBridge();
 
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -521,4 +720,12 @@ app.whenReady().then(() => {
 
 app.on('will-quit', () => {
     globalShortcut.unregisterAll();
+    if (voiceEarProcess) {
+        try { voiceEarProcess.kill(); } catch (e) {}
+        voiceEarProcess = null;
+    }
+    if (voiceBridgeServer) {
+        try { voiceBridgeServer.close(); } catch (e) {}
+        voiceBridgeServer = null;
+    }
 });

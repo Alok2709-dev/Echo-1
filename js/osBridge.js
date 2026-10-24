@@ -81,6 +81,20 @@ class EchoOSBridge {
         return { success: false, error: "Listing files requires Native Desktop Mode (run-echo.bat)." };
     }
 
+    async openFile(filePath) {
+        if (this.isNative && window.electronAPI.openFile) {
+            return await window.electronAPI.openFile(filePath);
+        }
+        return { success: false, error: "Opening files requires Native Desktop Mode (run-echo.bat)." };
+    }
+
+    async revealFile(filePath) {
+        if (this.isNative && window.electronAPI.revealFile) {
+            return await window.electronAPI.revealFile(filePath);
+        }
+        return { success: false, error: "Revealing files requires Native Desktop Mode (run-echo.bat)." };
+    }
+
     async runCommand(command) {
         if (this.isNative && window.electronAPI.runCmd) {
             return await window.electronAPI.runCmd(command);

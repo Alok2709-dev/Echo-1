@@ -411,27 +411,79 @@ Example: "[happy] It's great to see you again, Alok. All neural subroutines are 
         // ----------------------------------------------------
         // 5B. REAL WINDOWS FILE & FOLDER CREATION & AUTOMATION
         // ----------------------------------------------------
-        // Create file: "create file test.txt in downloads with content hello" or "create file notes.txt in desktop"
-        const createFileMatch = input.match(/(?:create|make)\s+(?:a\s+)?file\s+(?:called\s+|named\s+)?([^\s]+)(?:\s+in\s+([^\s]+))?(?:\s+with\s+(?:content|text)\s+(.*))?/i);
-        if (createFileMatch && window.echoOSBridge) {
-            const fileName = createFileMatch[1];
-            const folder = createFileMatch[2] ? createFileMatch[2].toLowerCase() : "desktop";
-            const content = createFileMatch[3] || "";
+        // Pattern A: "create file in [folder] with name [filename]" or "create file in [folder] with this name"
+        const createInFolderMatch = input.match(/(?:create|make|build)\s+(?:a\s+)?file\s+(?:in|on|at|inside)\s+([^\s]+)(?:\s+(?:with\s+name|named|called|with\s+this\s+name)\s+([^\s]+))?(?:\s+with\s+(?:content|text)\s+(.*))?/i);
+        // Pattern B: "create file [filename] in [folder] with content [text]"
+        const createFileMatch = input.match(/(?:create|make|build)\s+(?:a\s+)?file\s+(?:called\s+|named\s+)?([^\s]+)(?:\s+(?:in|on|at)\s+([^\s]+))?(?:\s+with\s+(?:content|text)\s+(.*))?/i);
+
+        if ((createInFolderMatch || createFileMatch) && window.echoOSBridge) {
+            let fileName = "Echo_File.txt";
+            let folder = "desktop";
+            let content = "";
+
+            if (createInFolderMatch && createInFolderMatch[1] && createInFolderMatch[1].toLowerCase() !== "file") {
+                folder = createInFolderMatch[1].trim();
+                fileName = createInFolderMatch[2] ? createInFolderMatch[2].trim() : "Echo_Document.txt";
+                content = createInFolderMatch[3] || "";
+            } else if (createFileMatch) {
+                fileName = createFileMatch[1].trim();
+                folder = createFileMatch[2] ? createFileMatch[2].trim() : "desktop";
+                content = createFileMatch[3] || "";
+            }
+
+            // Clean up fileName if it is a generic placeholder or word
+            if (fileName.toLowerCase() === "this" || fileName.toLowerCase() === "this name") {
+                fileName = "Echo_Note.txt";
+            }
+            if (!fileName.includes(".")) {
+                fileName += ".txt";
+            }
+
             const targetPath = `${folder}/${fileName}`;
-            const res = await window.echoOSBridge.createFile(targetPath, content);
+            const res = await window.echoOSBridge.createFile(targetPath, content || `Created by Echo Sentient AI on ${new Date().toLocaleString()}`);
+            return {
+                emotion: res.success ? "happy" : "alert",
+                text: res.success ? res.message : (res.error || "Failed to create file.")
+            };
+        }
+
+        // Create folder: "create folder project in downloads" or "create folder in desktop with name myfolder"
+        const createFolderInMatch = input.match(/(?:create|make)\s+(?:a\s+)?folder\s+(?:in|on|at)\s+([^\s]+)\s+(?:with\s+name|called|named)\s+([^\s]+)/i);
+        const createFolderMatch = input.match(/(?:create|make)\s+(?:a\s+)?folder\s+(?:called\s+|named\s+)?([^\s]+)(?:\s+(?:in|on)\s+([^\s]+))?/i);
+
+        if ((createFolderInMatch || createFolderMatch) && window.echoOSBridge) {
+            let folderName = "New_Folder";
+            let parent = "desktop";
+
+            if (createFolderInMatch) {
+                parent = createFolderInMatch[1].trim();
+                folderName = createFolderInMatch[2].trim();
+            } else if (createFolderMatch) {
+                folderName = createFolderMatch[1].trim();
+                parent = createFolderMatch[2] ? createFolderMatch[2].trim() : "desktop";
+            }
+
+            const targetPath = `${parent}/${folderName}`;
+            const res = await window.echoOSBridge.createFolder(targetPath);
+            return {
+                emotion: res.success ? "happy" : "alert",
+                text: res.success ? res.message : (res.error || "Failed to create folder.")
+            };
+        }
+
+        // Open or Reveal file: "open file test.txt" or "show file report.txt in folder"
+        const openFileMatch = lower.match(/(?:open|launch)\s+file\s+([^\s]+)/i);
+        if (openFileMatch && window.echoOSBridge && window.echoOSBridge.openFile) {
+            const res = await window.echoOSBridge.openFile(openFileMatch[1].trim());
             return {
                 emotion: res.success ? "happy" : "alert",
                 text: res.message || res.error
             };
         }
 
-        // Create folder: "create folder project in downloads" or "create folder myfolder on desktop"
-        const createFolderMatch = input.match(/(?:create|make)\s+(?:a\s+)?folder\s+(?:called\s+|named\s+)?([^\s]+)(?:\s+(?:in|on)\s+([^\s]+))?/i);
-        if (createFolderMatch && window.echoOSBridge) {
-            const folderName = createFolderMatch[1];
-            const parent = createFolderMatch[2] ? createFolderMatch[2].toLowerCase() : "desktop";
-            const targetPath = `${parent}/${folderName}`;
-            const res = await window.echoOSBridge.createFolder(targetPath);
+        const revealMatch = lower.match(/(?:reveal|show)\s+(?:file\s+)?([^\s]+)\s+in\s+folder/i);
+        if (revealMatch && window.echoOSBridge && window.echoOSBridge.revealFile) {
+            const res = await window.echoOSBridge.revealFile(revealMatch[1].trim());
             return {
                 emotion: res.success ? "happy" : "alert",
                 text: res.message || res.error

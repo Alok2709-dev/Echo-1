@@ -1016,19 +1016,22 @@ body.electron-mode {
 
 body.island-mode {
     background: transparent !important;
+    background-color: transparent !important;
     overflow: hidden !important;
 }
 
-body.island-mode #room,
-body.island-mode #loader,
-body.island-mode #auroraBorder {
+body.island-mode > *:not(#dynamicIslandBar) {
     display: none !important;
 }
 
 body.island-mode .dynamic-island {
     display: flex !important;
     opacity: 1 !important;
-    transform: translateX(-50%) scale(1) !important;
+    visibility: visible !important;
+    position: fixed !important;
+    top: 8px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
 }
 
 /* Dynamic Island expanded hover state */

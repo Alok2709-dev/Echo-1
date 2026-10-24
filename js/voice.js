@@ -48,6 +48,62 @@ class EchoVoiceEngine {
         this.initVoices();
         this.initAudioContext();
         this.initUnifiedSpeechRecognition();
+        this.initNativeVoiceBridge();
+
+        // Proactively start audio analysis stream on initial user gesture or timeout
+        window.addEventListener("click", () => this.startMicStream(), { once: true });
+        window.addEventListener("keydown", () => this.startMicStream(), { once: true });
+    }
+
+    initNativeVoiceBridge() {
+        if (typeof window.electronAPI !== "undefined" && window.electronAPI.onNativeVoiceTranscript) {
+            console.log("[EchoVoice] Attaching Windows Native Speech Ear Listener.");
+            window.electronAPI.onNativeVoiceTranscript((data) => {
+                this.handleNativeSpeech(data);
+            });
+        }
+    }
+
+    handleNativeSpeech(data) {
+        if (this.isSpeaking) return;
+        const finalText = data.final ? data.final.trim() : "";
+        const interimText = data.interim ? data.interim.trim() : "";
+        const active = (finalText || interimText).trim();
+        if (!active) return;
+
+        // 1. WAKE WORD DETECTION (Idle background ear)
+        if (this.listenMode === 'wakeword') {
+            for (let pattern of this.wakePatterns) {
+                if (pattern.test(active)) {
+                    console.log(`[EchoVoice-Native] Wake word triggered: "${active}"`);
+                    this.listenMode = 'command';
+                    if (this.onStateChangeCallback) this.onStateChangeCallback('listening');
+                    if (window.echoSounds) window.echoSounds.playWakeChime();
+
+                    const remaining = active.replace(pattern, "").trim().replace(/^[,.]/, "").trim();
+                    if (remaining.length > 2) {
+                        this.dispatchCommand(remaining);
+                    } else {
+                        this.acknowledgeWake();
+                    }
+                    return;
+                }
+            }
+        } 
+        // 2. ACTIVE COMMAND CAPTURE
+        else if (this.listenMode === 'command') {
+            if (this.onInterimCallback && active) {
+                this.onInterimCallback(active);
+            }
+            if (finalText) {
+                this.dispatchCommand(finalText);
+            } else {
+                clearTimeout(this.silenceTimer);
+                this.silenceTimer = setTimeout(() => {
+                    if (interimText) this.dispatchCommand(interimText);
+                }, 1400);
+            }
+        }
     }
 
     initVoices() {
@@ -193,10 +249,11 @@ class EchoVoiceEngine {
 
         this.recognition.onerror = (event) => {
             console.warn("[EchoVoice] Speech recognition error:", event.error);
-            if (event.error === "network") {
+            // If in browser mode and network error occurs, show polite hint
+            if (event.error === "network" && !(typeof window.electronAPI !== "undefined" && window.electronAPI.isElectron)) {
                 const dialogueText = document.getElementById("dialogueText");
                 if (dialogueText) {
-                    dialogueText.textContent = "Voice speech recognition active in Browser mode. Launch open-browser.bat in Chrome/Edge for instant Google Neural Speech, or type in the bar!";
+                    dialogueText.textContent = "Connecting to speech services... Tap mic or type below.";
                 }
             }
             if (event.error !== "not-allowed" && event.error !== "aborted") {
@@ -234,6 +291,7 @@ class EchoVoiceEngine {
 
     // Trigger command mode directly (e.g. mic button or spacebar)
     toggleListening() {
+        this.startMicStream();
         if (this.listenMode === 'command') {
             this.listenMode = 'wakeword';
             if (this.onStateChangeCallback) this.onStateChangeCallback('idle');
