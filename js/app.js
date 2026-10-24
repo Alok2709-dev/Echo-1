@@ -151,6 +151,70 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    // Expose handleUserMessage globally for Hands-Free Wake Word Engine
+    window.handleUserMessage = handleUserMessage;
+
+    // Screen Vision Perceptual Analysis Button
+    const screenVisionBtn = document.getElementById("screenVisionBtn");
+    if (screenVisionBtn && window.echoScreenVision) {
+        screenVisionBtn.addEventListener("click", async () => {
+            if (window.echoSounds) window.echoSounds.playListenTick();
+            displayDialogue("Echo", "Capturing & analyzing screen telemetry...");
+            const res = await window.echoScreenVision.analyzeScreen("Analyze what is currently open on my screen");
+            displayDialogue("Echo", res.text);
+            if (window.echoVoice) window.echoVoice.speak(res.text, res.emotion || "speaking");
+        });
+    }
+
+    // Dynamic Island Mode Switching
+    let isIslandMode = false;
+    const islandModeToggleBtn = document.getElementById("islandModeToggleBtn");
+    const islandExpandBtn = document.getElementById("islandExpandBtn");
+    const islandMicBtn = document.getElementById("islandMicBtn");
+    const islandBar = document.getElementById("dynamicIslandBar");
+
+    function setIslandMode(enabled) {
+        isIslandMode = enabled;
+        document.body.classList.toggle("island-mode", isIslandMode);
+        if (islandBar) islandBar.classList.toggle("hidden", !isIslandMode);
+
+        if (typeof window.electronAPI !== "undefined" && window.electronAPI.setMode) {
+            window.electronAPI.setMode(isIslandMode ? "island" : "full");
+        }
+    }
+
+    if (islandModeToggleBtn) {
+        islandModeToggleBtn.addEventListener("click", () => setIslandMode(true));
+    }
+    if (islandExpandBtn) {
+        islandExpandBtn.addEventListener("click", () => setIslandMode(false));
+    }
+    if (islandMicBtn && window.echoVoice) {
+        islandMicBtn.addEventListener("click", () => {
+            if (window.echoSounds) window.echoSounds.playListenTick();
+            window.echoVoice.toggleListening();
+        });
+    }
+
+    if (typeof window.electronAPI !== "undefined" && window.electronAPI.onModeChanged) {
+        window.electronAPI.onModeChanged((mode) => {
+            setIslandMode(mode === "island");
+        });
+    }
+
+    // Settings Segmented Tabs Navigation
+    document.querySelectorAll(".settings-tab-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const tabId = btn.getAttribute("data-tab");
+            document.querySelectorAll(".settings-tab-btn").forEach(b => b.classList.remove("active"));
+            document.querySelectorAll(".settings-tab-panel").forEach(p => p.classList.remove("active"));
+            btn.classList.add("active");
+            const targetPanel = document.getElementById(tabId);
+            if (targetPanel) targetPanel.classList.add("active");
+            if (window.echoSounds) window.echoSounds.playListenTick();
+        });
+    });
+
     // Camera & Vision Toggle Button
     const cameraBtn = document.getElementById("cameraBtn");
     if (cameraBtn && window.echoVision) {
@@ -328,9 +392,12 @@ document.addEventListener("DOMContentLoaded", () => {
         const elevenVoiceSelect = document.getElementById("elevenVoiceSelect");
         const gcalUrlInput = document.getElementById("gcalUrlInput");
         const spotifyUriInput = document.getElementById("spotifyUriInput");
+        const wakeWordSwitch = document.getElementById("wakeWordSwitch");
+        const startupSwitch = document.getElementById("startupSwitch");
+        const ollamaModelSelect = document.getElementById("ollamaModelSelect");
         const saveSettingsBtn = document.getElementById("saveSettingsBtn");
 
-        settingsBtn.addEventListener("click", () => {
+        settingsBtn.addEventListener("click", async () => {
             if (userNameInput && window.echoMemory) {
                 userNameInput.value = window.echoMemory.getUserName();
             }
@@ -348,6 +415,18 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             if (spotifyUriInput && window.echoMusic) {
                 spotifyUriInput.value = window.echoMusic.spotifyUri || "";
+            }
+            if (wakeWordSwitch && window.echoWakeWord) {
+                wakeWordSwitch.checked = window.echoWakeWord.isEnabled;
+            }
+            if (startupSwitch && typeof window.electronAPI !== "undefined" && window.electronAPI.getStartup) {
+                startupSwitch.checked = await window.electronAPI.getStartup();
+            }
+            if (ollamaModelSelect && window.echoOllama) {
+                if (window.echoOllama.models && window.echoOllama.models.length > 0) {
+                    ollamaModelSelect.innerHTML = window.echoOllama.models.map(m => `<option value="${m}">${m}</option>`).join("");
+                }
+                ollamaModelSelect.value = window.echoOllama.activeModel;
             }
             settingsModal.classList.add("active");
         });
@@ -373,10 +452,22 @@ document.addEventListener("DOMContentLoaded", () => {
                     window.echoMusic.spotifyUri = spotifyUriInput.value.trim();
                     localStorage.setItem("echo_spotify_uri", window.echoMusic.spotifyUri);
                 }
+                if (wakeWordSwitch && window.echoWakeWord) {
+                    if (wakeWordSwitch.checked) window.echoWakeWord.enable();
+                    else window.echoWakeWord.stop();
+                }
+                if (startupSwitch && typeof window.electronAPI !== "undefined" && window.electronAPI.setStartup) {
+                    await window.electronAPI.setStartup(startupSwitch.checked);
+                }
+                if (ollamaModelSelect && window.echoOllama) {
+                    window.echoOllama.activeModel = ollamaModelSelect.value;
+                    localStorage.setItem("echo_ollama_model", ollamaModelSelect.value);
+                    window.echoOllama.updateUIBadge();
+                }
 
                 settingsModal.classList.remove("active");
                 const name = window.echoMemory ? window.echoMemory.getUserName() : "Alok";
-                displayDialogue("Echo", `All connections synced, ${name}! Your calendar, Spotify, and neural parameters are active.`);
+                displayDialogue("Echo", `System preferences updated, ${name}! All neural parameters, wake word, and desktop bridges are active.`);
                 if (window.echoSounds) window.echoSounds.playResponseChime();
             });
         }

@@ -1,79 +1,71 @@
-# ECHO v2.6 — Sentient AI Companion & Native Windows Assistant
+# ECHO v3.0 — The Ultimate Sentient AI Companion & Windows Desktop Assistant
 
-An advanced, atmospheric, emotionally-sentient AI companion interface featuring real-time **Vision & Facial Telemetry**, **Native Windows Desktop Automation**, **Ultra-Human Speech Synthesis**, an organic living fluid orb, ambient procedural music deck, live control center (weather, calendar, tasks), and proactive JARVIS intelligence.
-
----
-
-## 🌟 What's New in v2.6
-
-### 1. 👁️ Optical Vision & Facial Telemetry Matrix (`js/vision.js`)
-- **Real-time Facial Scanning**: Instant webcam feed with futuristic HUD scan reticle and laser sweep.
-- **Mood & Emotion Telemetry**: Detects facial cues, smile curvature, eye dynamics, and fatigue:
-  - `happy`: Vibrant smile frequency and enthusiasm
-  - `focused`: Concentrated, sharp posture
-  - `tired`: Fatigue detection with proactive break advice
-- **Zero-Dependency Offline Computer Vision**: Runs directly on HTML5 Canvas with chromatic YCbCr color model analysis without external heavy model downloads.
-- **Interactive Voice Queries**:
-  - *"How do I look?"*
-  - *"Check my face / expression"*
-  - *"Turn on camera"* / *"Close camera"*
-
-### 2. 🖥️ Native Windows Desktop Assistant (`main.js` + `preload.js`)
-- **Global Hotkey Trigger**: Press **`Alt + Space`** anywhere in Windows to summon or hide Echo instantly.
-- **Frameless Glass Window**: Apple macOS/iOS style floating glassmorphism with subtle drop shadows.
-- **System Window Controls**: Integrated Minimize, Maximize, and Close actions.
-- **Quick Desktop Launch**:
-  ```bash
-  npm start
-  ```
-
-### 3. ⚙️ Real OS Automation Bridge (`js/osBridge.js`)
-Echo can directly control Windows apps and hardware via secure IPC and PowerShell:
-- **App Launcher**:
-  - *"Open Visual Studio Code"* (or *"Open VS Code"*)
-  - *"Open File Explorer"* (or *"Open files"*)
-  - *"Launch Notepad"*
-  - *"Open Calculator"*
-  - *"Open Terminal"* (or *"Open PowerShell"*)
-  - *"Launch Chrome"* / *"Open Spotify"*
-- **Hardware & System Control**:
-  - *"Take a screenshot"* (automatically saved to your Windows Pictures folder)
-  - *"Set volume to 50"* / *"Mute volume"* / *"Unmute"*
-  - *"System status"* (reports active RAM and CPU load)
-  - *"Lock computer"* (instantly secures workstation)
-
-### 4. 🎙️ Ultra-Human Voice Engine (`js/voice.js`)
-- **Natural Conversational Cadence**: Splits sentences into micro-thought clauses with subtle 80ms human breathing pauses instead of continuous robotic monotone delivery.
-- **Neural Voice Auto-Selection**: Automatically prioritizes modern neural system voices (Microsoft Jenny, Aria, Guy, Google US English).
-- **Live Interim Hearing**: Displays words on-screen in real time as you speak them (`YOU (HEARING...)`).
-- **Cinema-Grade ElevenLabs Integration**: Optional ElevenLabs streaming with automatic exponential backoff retry.
-- **Bilingual & Hinglish Understanding**: Responds warmly to casual Hinglish greetings (*"kaisa hai"*, *"kya chal raha hai"*, *"kisne banaya"*).
+Echo is an Apple Intelligence & JARVIS-inspired, deeply sentient AI companion engineered to live permanently on your Windows PC. Featuring **Hands-Free "Hey Echo" Wake Word detection**, **Apple Dynamic Island Floating Pill**, **Multi-Modal Screen Perception**, **Local Ollama LLM integration**, and **Real Windows OS Automation**.
 
 ---
 
-## ⌨️ Complete Quick Controls & Shortcuts
+## 🌟 What's New in v3.0
 
-| Action | Control |
+### 1. 🎙️ Hands-Free "Hey Echo" Acoustic Wake Word (`js/wakeword.js`)
+- **Zero-Click Voice Activation**: Echo listens in the background. Just say:
+  - *"Hey Echo, open Spotify"*
+  - *"Echo, what's on my calendar?"*
+  - *"Sun Echo, kaisa hai?"*
+- Instantly wakes with an iridescent aurora glow and audio-reactive orb pulse without touching your keyboard or mouse.
+
+### 2. 🏝️ Apple Dynamic Island Floating Pill (`#dynamicIslandBar`)
+- **Compact Desktop Dock**: Switch into Dynamic Island mode to dock Echo as a sleek floating glass capsule at the top of your screen.
+- **Always-on-Top Perception**: Floats cleanly over games, code editors, and browsers with live audio waves, rotating mini-orb, and quick summon controls.
+- Expand back to full holographic workspace anytime via the expand button or voice (*"Expand window"*).
+
+### 3. 🖥️ Multi-Modal Screen Vision Perception (`js/screenVision.js`)
+- Echo can inspect your desktop workspace and active windows:
+  - *"Echo, see my screen"*
+  - *"What is on my screen?"*
+  - *"Analyze this code on my screen"*
+- Captures the active monitor frame and provides immediate contextual understanding.
+
+### 4. 🦙 Deep Local Brain — Ollama & Llama 3 Integration (`js/ollama.js`)
+- **100% Offline, Private & Free Unlimited Reasoning**: Automatically connects to local Ollama (`http://localhost:11434`) running Llama 3, Mistral, Gemma, or Phi-3.
+- Answers any programming, math, creative writing, or general knowledge question with zero cloud dependencies or subscriptions.
+- Seamless fallback to Gemini Flash if cloud API is preferred.
+
+### 5. ⚙️ Apple macOS / iOS 18 Glassmorphism Settings Center
+- Completely redesigned with segmented categories:
+  - 🧠 **Brain & LLM**: Local Ollama model selector & Gemini key configuration
+  - 🎙️ **Wake Word & Voice**: Hands-free toggle & ElevenLabs cinema voice selection
+  - 🖥️ **Windows Desktop**: Launch on Windows startup toggle & Alt+Space hotkey
+  - 🔗 **Connected Services**: Real Google Calendar iCal sync & Spotify playlist URI
+  - 👤 **Identity**: Name and personalized knowledge profile
+
+### 6. 🪟 Permanent Windows Background Service (`main.js`)
+- Runs continuously in the Windows System Tray even when the window is closed.
+- Auto-starts on Windows login so Echo is always ready the moment you turn on your PC.
+- Summon instantly from anywhere with **`Alt + Space`** or simply by saying **`"Hey Echo"`**.
+
+---
+
+## ⌨️ Global Shortcuts & Voice Commands
+
+| Action | Control / Voice Command |
 | :--- | :--- |
-| **Summon / Hide Echo (Desktop)** | **`Alt + Space`** or **`Ctrl + Shift + Space`** |
-| **Speak to Echo** | Click **Mic** or press **Spacebar** |
-| **Toggle Vision / Camera** | Click **Vision** in top bar or say *"Open camera"* |
-| **Transmit Command** | Press **Enter** in command bar or click **Send** |
-| **Toggle Control Center** | Click **Dashboard** in top bar |
-| **Play/Pause Ambient Music** | Click Play on the bottom-left deck |
-| **Inspect Stored Memories** | Click **Memory** in top bar |
-| **Configure API Keys** | Click **Settings** in top bar |
+| **Summon / Hide Anywhere** | **`Alt + Space`** or **`Ctrl + Shift + Space`** |
+| **Hands-Free Activation** | Say **`"Hey Echo"`** or **`"Echo"`** |
+| **Screen Perception** | Say *"What is on my screen?"* or click **Screen** |
+| **Toggle Dynamic Island** | Say *"Pill mode"* or click **Pill** in header |
+| **Play Spotify / Apple Music** | *"Play Arijit Singh on Spotify"*, *"Play Apple Music"* |
+| **Sync Google Calendar** | *"Sync calendar"*, *"What is my schedule today?"* |
+| **Vision & Facial Mood** | *"How do I look?"*, *"Check my face"* |
+| **Windows OS Control** | *"Open VS Code"*, *"Take screenshot"*, *"Set volume to 50"* |
 
 ---
 
-## 🚀 How to Run
+## 🚀 How to Run Permanently on PC
 
-### Option A: Native Desktop App (Recommended for OS Automation & Hotkey)
-```bash
+Double-click **`run-echo.bat`** or run:
+```powershell
 cd C:\Users\aloks\.gemini\antigravity\scratch\Echo-1
 npm start
 ```
 
-### Option B: Instant In-Browser Experience (100% Offline)
-Simply double click `index.html` or open it in any web browser (Chrome, Edge, Brave, etc.).
-No installation or build tools required!
+Turn on **"Launch on Windows Startup"** inside Echo's Settings to keep Echo running as your daily permanent AI assistant.

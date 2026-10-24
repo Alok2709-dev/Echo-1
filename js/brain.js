@@ -207,7 +207,57 @@ Example: "[happy] It's great to see you again, Alok. All neural subroutines are 
         }
 
         // ----------------------------------------------------
-        // 4. VISION & OPTICAL SENSOR TELEMETRY
+        // 4. MULTI-MODAL SCREEN VISION ("SEE MY SCREEN")
+        // ----------------------------------------------------
+        if (
+            lower.includes("see my screen") ||
+            lower.includes("look at my screen") ||
+            lower.includes("what is on my screen") ||
+            lower.includes("analyze my screen") ||
+            lower.includes("read my screen") ||
+            lower.includes("check my screen") ||
+            lower.includes("explain this code")
+        ) {
+            if (window.echoScreenVision) {
+                return await window.echoScreenVision.analyzeScreen(input);
+            }
+        }
+
+        // ----------------------------------------------------
+        // 4B. DYNAMIC ISLAND WINDOW MODE CONTROLS
+        // ----------------------------------------------------
+        if (
+            lower.includes("dynamic island") ||
+            lower.includes("pill mode") ||
+            lower.includes("mini mode") ||
+            lower.includes("shrink window")
+        ) {
+            if (typeof window.electronAPI !== "undefined" && window.electronAPI.setMode) {
+                window.electronAPI.setMode("island");
+                return {
+                    emotion: "happy",
+                    text: "Switched to Dynamic Island mode. Floating at top of screen."
+                };
+            }
+        }
+
+        if (
+            lower.includes("full mode") ||
+            lower.includes("expand window") ||
+            lower.includes("maximize mode") ||
+            lower.includes("exit island")
+        ) {
+            if (typeof window.electronAPI !== "undefined" && window.electronAPI.setMode) {
+                window.electronAPI.setMode("full");
+                return {
+                    emotion: "happy",
+                    text: "Expanded to full holographic workspace."
+                };
+            }
+        }
+
+        // ----------------------------------------------------
+        // 5. VISION & OPTICAL SENSOR TELEMETRY
         // ----------------------------------------------------
         if (lower.includes("turn on camera") || lower.includes("open camera") || lower.includes("enable vision") || lower.includes("start vision") || lower.includes("turn on vision")) {
             if (window.echoVision) {
@@ -468,7 +518,18 @@ Example: "[happy] It's great to see you again, Alok. All neural subroutines are 
         }
 
         // ----------------------------------------------------
-        // 10. GEMINI LLM MULTI-TURN REASONING (If Key Set)
+        // 10. LOCAL OLLAMA / PRIVATE LLM BRAIN (If Online)
+        // ----------------------------------------------------
+        if (window.echoOllama && window.echoOllama.isAvailable) {
+            try {
+                return await window.echoOllama.generate(input, memory);
+            } catch (err) {
+                console.warn("Ollama query failed, falling back to Gemini / synthetic brain:", err);
+            }
+        }
+
+        // ----------------------------------------------------
+        // 11. GEMINI LLM MULTI-TURN REASONING (If Key Set)
         // ----------------------------------------------------
         if (this.apiKey) {
             try {

@@ -21,6 +21,22 @@
 
 <body>
 
+  <!-- Apple Dynamic Island Floating Pill -->
+  <div id="dynamicIslandBar" class="dynamic-island hidden">
+    <div class="island-left">
+      <div class="island-orb"></div>
+      <span class="island-title" id="islandTitleText">Echo Sentient Core</span>
+    </div>
+    <div class="island-right">
+      <button class="island-btn" id="islandMicBtn" title="Speak to Echo">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+      </button>
+      <button class="island-btn" id="islandExpandBtn" title="Expand Full Workspace">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+      </button>
+    </div>
+  </div>
+
   <!-- Apple Intelligence Aurora Screen Edge Glow -->
   <div id="auroraBorder"></div>
 
@@ -60,6 +76,18 @@
         <button class="hud-btn" id="cameraBtn" title="Toggle Optical Vision Matrix">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
           Vision
+        </button>
+
+        <!-- Multi-Modal Screen Perception -->
+        <button class="hud-btn" id="screenVisionBtn" title="Inspect Active Screen with AI">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          Screen
+        </button>
+
+        <!-- Dynamic Island Mini Mode Toggle -->
+        <button class="hud-btn" id="islandModeToggleBtn" title="Switch to Dynamic Island Floating Pill">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="9" width="16" height="6" rx="3"/></svg>
+          Pill
         </button>
 
         <!-- Dashboard Toggle -->
@@ -252,49 +280,166 @@
     </div>
   </div>
 
-  <!-- Settings Modal (Gemini + ElevenLabs) -->
+  <!-- Apple macOS Style Tabbed Settings Center -->
   <div class="hud-modal" id="settingsModal">
-    <div class="modal-content">
+    <div class="modal-content settings-modal-content">
       <div class="modal-header">
-        <h3>Neural Core Configuration</h3>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span class="status-dot"></span>
+          <h3 style="margin: 0; font-size: 17px; letter-spacing: -0.2px;">Echo System Preferences</h3>
+        </div>
         <button class="modal-close">&times;</button>
       </div>
-      <div class="modal-body">
-        <label for="userNameInput" style="font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.8);">Your Name</label>
-        <input type="text" id="userNameInput" class="modal-input" placeholder="e.g. Alok">
-        <p class="modal-desc">Echo uses this to address and recognize you across all subroutines.</p>
 
-        <label for="apiKeyInput" style="font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.8); margin-top: 8px;">Google Gemini API Key (Optional)</label>
-        <input type="password" id="apiKeyInput" class="modal-input" placeholder="Paste your Gemini API key here...">
-        <p class="modal-desc">Provides multi-turn conversational reasoning. (Echo works locally with high speed even without this).</p>
+      <!-- Segmented Navigation Bar -->
+      <div class="settings-tabs-header">
+        <button class="settings-tab-btn active" data-tab="tab-intelligence">🧠 Brain & LLM</button>
+        <button class="settings-tab-btn" data-tab="tab-voice">🎙️ Wake Word & Voice</button>
+        <button class="settings-tab-btn" data-tab="tab-desktop">🖥️ Windows Desktop</button>
+        <button class="settings-tab-btn" data-tab="tab-services">🔗 Connected Services</button>
+        <button class="settings-tab-btn" data-tab="tab-identity">👤 Profile</button>
+      </div>
 
-        <label for="elevenKeyInput" style="font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.8); margin-top: 8px;">ElevenLabs API Key (Optional)</label>
-        <input type="password" id="elevenKeyInput" class="modal-input" placeholder="Paste ElevenLabs key for cinema voice...">
-        
-        <label for="elevenVoiceSelect" style="font-size: 12px; color: rgba(255,255,255,0.7); margin-top: 4px;">Voice Persona</label>
-        <select id="elevenVoiceSelect" class="modal-input" style="cursor: pointer;">
-          <option value="21m00Tcm4TlvDq8ikWAM">Rachel (Calm, Empathetic)</option>
-          <option value="AZnzlk1XvdvUeBnXmlld">Domi (Warm, Intelligent)</option>
-          <option value="EXAVITQu4vr4xnSDxMaL">Bella (Expressive, Futuristic)</option>
-          <option value="ErXwobaYiN019PkySvjV">Antoni (Smooth, Confident)</option>
-        </select>
-        <p class="modal-desc">Without ElevenLabs, Echo uses tuned browser speech synthesis automatically.</p>
+      <div class="modal-body" style="gap: 0;">
+        <!-- TAB 1: INTELLIGENCE & LLM -->
+        <div class="settings-tab-panel active" id="tab-intelligence">
+          <div class="settings-card">
+            <div class="settings-card-info">
+              <span class="settings-card-title">Local Ollama Brain</span>
+              <span class="settings-card-desc">100% private, offline neural intelligence. Zero subscription or internet required.</span>
+            </div>
+            <span class="status-badge inactive" id="ollamaStatusBadge">Checking Ollama...</span>
+          </div>
 
-        <!-- Connected Accounts & Calendars -->
-        <div style="border-top: 1px solid rgba(255,255,255,0.1); margin: 16px 0; padding-top: 12px;">
-          <h4 style="font-size: 13px; font-weight: 600; color: #00e5ff; letter-spacing: 0.5px; margin-bottom: 8px;">Connected Services</h4>
-          
-          <label for="gcalUrlInput" style="font-size: 12px; color: rgba(255,255,255,0.8);">Google Calendar iCal / Secret Address (.ics)</label>
-          <input type="text" id="gcalUrlInput" class="modal-input" placeholder="https://calendar.google.com/calendar/ical/.../basic.ics">
-          <p class="modal-desc">From Google Calendar Settings &gt; Integrate calendar &gt; Secret address in iCal format.</p>
+          <div class="settings-card">
+            <div class="settings-card-info">
+              <span class="settings-card-title">Ollama Model</span>
+              <span class="settings-card-desc">Active model running on your local hardware.</span>
+            </div>
+            <select id="ollamaModelSelect" class="modal-input" style="max-width: 170px; padding: 6px 10px; font-size: 12px;">
+              <option value="llama3">Llama 3 (Meta)</option>
+              <option value="mistral">Mistral 7B</option>
+              <option value="gemma:2b">Gemma 2B (Google)</option>
+              <option value="phi3">Phi-3 (Microsoft)</option>
+            </select>
+          </div>
 
-          <label for="spotifyUriInput" style="font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 6px;">Spotify Default Playlist URI</label>
-          <input type="text" id="spotifyUriInput" class="modal-input" placeholder="playlist/37i9dQZF1DXcBWIGoYBM5M">
+          <div class="settings-card" style="flex-direction: column; align-items: stretch; gap: 8px;">
+            <div class="settings-card-info">
+              <span class="settings-card-title">Google Gemini Flash Key (Optional Cloud LLM)</span>
+              <span class="settings-card-desc">Powers deep multimodal reasoning and screen vision understanding.</span>
+            </div>
+            <input type="password" id="apiKeyInput" class="modal-input" placeholder="AIzaSy...">
+          </div>
+        </div>
+
+        <!-- TAB 2: VOICE & WAKE WORD -->
+        <div class="settings-tab-panel" id="tab-voice">
+          <div class="settings-card">
+            <div class="settings-card-info">
+              <span class="settings-card-title">Hands-Free "Hey Echo" Wake Word</span>
+              <span class="settings-card-desc">Always-on background listening. Just say "Hey Echo" without touching keyboard or mouse.</span>
+            </div>
+            <label class="ios-switch">
+              <input type="checkbox" id="wakeWordSwitch" checked>
+              <span class="ios-slider"></span>
+            </label>
+          </div>
+
+          <div class="settings-card">
+            <div class="settings-card-info">
+              <span class="settings-card-title">ElevenLabs High-Fidelity Cinema Voice</span>
+              <span class="settings-card-desc">Cinema-grade neural streaming with human emotional prosody.</span>
+            </div>
+            <select id="elevenVoiceSelect" class="modal-input" style="max-width: 180px; padding: 6px 10px; font-size: 12px;">
+              <option value="21m00Tcm4TlvDq8ikWAM">Rachel (Calm & Empathetic)</option>
+              <option value="AZnzlk1XvdvUeBnXmlld">Domi (Warm & Intelligent)</option>
+              <option value="EXAVITQu4vr4xnSDxMaL">Bella (Expressive & Futuristic)</option>
+              <option value="ErXwobaYiN019PkySvjV">Antoni (Smooth & Confident)</option>
+            </select>
+          </div>
+
+          <div class="settings-card" style="flex-direction: column; align-items: stretch; gap: 8px;">
+            <div class="settings-card-info">
+              <span class="settings-card-title">ElevenLabs API Key (Optional)</span>
+              <span class="settings-card-desc">Leave empty to use Microsoft/Google natural system voices automatically.</span>
+            </div>
+            <input type="password" id="elevenKeyInput" class="modal-input" placeholder="Paste ElevenLabs key here...">
+          </div>
+        </div>
+
+        <!-- TAB 3: WINDOWS DESKTOP -->
+        <div class="settings-tab-panel" id="tab-desktop">
+          <div class="settings-card">
+            <div class="settings-card-info">
+              <span class="settings-card-title">Launch on Windows Startup</span>
+              <span class="settings-card-desc">Run Echo permanently in the background whenever your computer boots up.</span>
+            </div>
+            <label class="ios-switch">
+              <input type="checkbox" id="startupSwitch">
+              <span class="ios-slider"></span>
+            </label>
+          </div>
+
+          <div class="settings-card">
+            <div class="settings-card-info">
+              <span class="settings-card-title">Global Summon Hotkey</span>
+              <span class="settings-card-desc">Summons Echo on top of any game, IDE, or browser window.</span>
+            </div>
+            <span class="vision-data-chip" style="font-size: 11px; padding: 4px 10px; background: rgba(0, 229, 255, 0.15); border-color: rgba(0, 229, 255, 0.4); color: #00e5ff;">Alt + Space</span>
+          </div>
+
+          <div class="settings-card">
+            <div class="settings-card-info">
+              <span class="settings-card-title">Multi-Modal Screen Perception</span>
+              <span class="settings-card-desc">Echo inspects active screen context when you ask "What's on my screen?".</span>
+            </div>
+            <span class="status-badge active">Active</span>
+          </div>
+        </div>
+
+        <!-- TAB 4: CONNECTED SERVICES -->
+        <div class="settings-tab-panel" id="tab-services">
+          <div class="settings-card" style="flex-direction: column; align-items: stretch; gap: 8px;">
+            <div class="settings-card-info">
+              <span class="settings-card-title">Google Calendar Sync (iCal Link)</span>
+              <span class="settings-card-desc">Found in Google Calendar Settings &gt; Integrate calendar &gt; Secret address in iCal format (.ics).</span>
+            </div>
+            <input type="text" id="gcalUrlInput" class="modal-input" placeholder="https://calendar.google.com/calendar/ical/.../basic.ics">
+          </div>
+
+          <div class="settings-card" style="flex-direction: column; align-items: stretch; gap: 8px;">
+            <div class="settings-card-info">
+              <span class="settings-card-title">Spotify Default Playlist / Album URI</span>
+              <span class="settings-card-desc">Used when playing music directly from your ambient deck.</span>
+            </div>
+            <input type="text" id="spotifyUriInput" class="modal-input" placeholder="playlist/37i9dQZF1DXcBWIGoYBM5M">
+          </div>
+        </div>
+
+        <!-- TAB 5: IDENTITY -->
+        <div class="settings-tab-panel" id="tab-identity">
+          <div class="settings-card" style="flex-direction: column; align-items: stretch; gap: 8px;">
+            <div class="settings-card-info">
+              <span class="settings-card-title">Your Name</span>
+              <span class="settings-card-desc">How Echo addresses you across all interactions.</span>
+            </div>
+            <input type="text" id="userNameInput" class="modal-input" placeholder="e.g. Alok">
+          </div>
+
+          <div class="settings-card">
+            <div class="settings-card-info">
+              <span class="settings-card-title">Echo Voice Recognition Status</span>
+              <span class="settings-card-desc">Wake-word detection status.</span>
+            </div>
+            <span class="status-badge active" id="wakeWordStatusBadge">Always Listening</span>
+          </div>
         </div>
       </div>
-      <div class="modal-actions">
+
+      <div class="modal-actions" style="margin-top: 18px;">
         <button class="hud-btn modal-close">Cancel</button>
-        <button class="hud-btn" id="saveSettingsBtn" style="border-color: #00e5ff; color: #00e5ff; font-weight: 600;">Save Settings</button>
+        <button class="hud-btn" id="saveSettingsBtn" style="border-color: #00e5ff; color: #00e5ff; font-weight: 600;">Apply Changes</button>
       </div>
     </div>
   </div>
@@ -304,11 +449,14 @@
   <script src="js/sound.js"></script>
   <script src="js/osBridge.js"></script>
   <script src="js/vision.js"></script>
+  <script src="js/screenVision.js"></script>
+  <script src="js/ollama.js"></script>
   <script src="js/music.js"></script>
   <script src="js/memory.js"></script>
   <script src="js/dashboard.js"></script>
   <script src="js/proactive.js"></script>
   <script src="js/voice.js"></script>
+  <script src="js/wakeword.js"></script>
   <script src="js/brain.js"></script>
   <script src="js/core.js"></script>
   <script src="js/room.js"></script>
