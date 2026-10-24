@@ -1,6 +1,7 @@
-/* ==========================================
-   ECHO VOICE & AUDIO REACTIVITY ENGINE
-========================================== */
+/* ==========================================================
+   ECHO VOICE & NEURAL SPEECH ENGINE
+   Browser Web Speech + Optional ElevenLabs High-Fidelity Audio
+========================================================== */
 
 class EchoVoiceEngine {
     constructor() {
@@ -12,12 +13,24 @@ class EchoVoiceEngine {
         this.analyser = null;
         this.dataArray = null;
         this.micStream = null;
-        this.audioLevel = 0; // 0.0 to 1.0
+        this.audioLevel = 0;
         this.onTranscriptCallback = null;
         this.onStateChangeCallback = null;
 
+        this.elevenLabsKey = localStorage.getItem("echo_elevenlabs_api_key") || "";
+        this.elevenLabsVoiceId = localStorage.getItem("echo_elevenlabs_voice_id") || "21m00Tcm4TlvDq8ikWAM"; // Default Rachel
+
+        this.currentAudioEl = null;
+
         this.initSpeechRecognition();
         this.initAudioContext();
+    }
+
+    setElevenLabsKey(key, voiceId) {
+        this.elevenLabsKey = key.trim();
+        if (voiceId) this.elevenLabsVoiceId = voiceId.trim();
+        localStorage.setItem("echo_elevenlabs_api_key", this.elevenLabsKey);
+        localStorage.setItem("echo_elevenlabs_voice_id", this.elevenLabsVoiceId);
     }
 
     initAudioContext() {
@@ -46,7 +59,7 @@ class EchoVoiceEngine {
                 source.connect(this.analyser);
             }
         } catch (e) {
-            console.warn("Could not attach microphone to Web Audio analyzer:", e);
+            console.warn("Could not attach mic to Web Audio analyzer:", e);
         }
     }
 
@@ -97,7 +110,7 @@ class EchoVoiceEngine {
 
     toggleListening() {
         if (!this.recognition) {
-            alert("Speech Recognition is not supported on this browser. You can still type in the command bar!");
+            alert("Speech Recognition not available in this browser. You can type in the dock!");
             return false;
         }
 
@@ -106,31 +119,99 @@ class EchoVoiceEngine {
             return false;
         } else {
             try {
-                this.synth.cancel(); // Stop speaking if Echo was talking
+                this.stopSpeaking();
                 this.recognition.start();
                 return true;
             } catch (e) {
-                console.error("Failed to start speech recognition:", e);
                 return false;
             }
         }
     }
 
-    speak(text, emotion = "idle", onEnd = null) {
+    stopSpeaking() {
+        if (this.synth) this.synth.cancel();
+        if (this.currentAudioEl) {
+            this.currentAudioEl.pause();
+            this.currentAudioEl = null;
+        }
+        this.isSpeaking = false;
+    }
+
+    async speak(text, emotion = "idle", onEnd = null) {
+        this.stopSpeaking();
+
+        // 1. If ElevenLabs API Key is present, use neural cloud voice
+        if (this.elevenLabsKey) {
+            try {
+                await this.speakElevenLabs(text, emotion, onEnd);
+                return;
+            } catch (e) {
+                console.warn("ElevenLabs streaming error, falling back to browser neural voice:", e);
+            }
+        }
+
+        // 2. Browser Native Speech Synthesis (Instant, Offline)
+        this.speakBrowserNative(text, emotion, onEnd);
+    }
+
+    async speakElevenLabs(text, emotion, onEnd) {
+        const url = `https://api.elevenlabs.io/v1/text-to-speech/${this.elevenLabsVoiceId}/stream`;
+        const res = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Accept": "audio/mpeg",
+                "Content-Type": "application/json",
+                "xi-api-key": this.elevenLabsKey
+            },
+            body: JSON.stringify({
+                text: text,
+                model_id: "eleven_monolingual_v1",
+                voice_settings: { stability: 0.65, similarity_boost: 0.75 }
+            })
+        });
+
+        if (!res.ok) throw new Error("ElevenLabs request failed");
+
+        const blob = await res.blob();
+        const audioUrl = URL.createObjectURL(blob);
+        const audio = new Audio(audioUrl);
+        this.currentAudioEl = audio;
+
+        // Route to AudioContext analyser for visualizer
+        if (this.audioContext) {
+            try {
+                const source = this.audioContext.createMediaElementSource(audio);
+                source.connect(this.analyser);
+                source.connect(this.audioContext.destination);
+            } catch (e) {}
+        }
+
+        this.isSpeaking = true;
+        if (this.onStateChangeCallback) this.onStateChangeCallback("speaking");
+
+        audio.onended = () => {
+            this.isSpeaking = false;
+            URL.revokeObjectURL(audioUrl);
+            if (onEnd) onEnd();
+            if (this.onStateChangeCallback) this.onStateChangeCallback("idle");
+        };
+
+        audio.play();
+    }
+
+    speakBrowserNative(text, emotion, onEnd) {
         if (!this.synth) return;
-        this.synth.cancel();
 
         const utterance = new SpeechSynthesisUtterance(text);
-        
-        // Pick best available English voice
         const voices = this.synth.getVoices();
+        
+        // Find best English voice
         const preferredVoice = voices.find(v => 
-            v.lang.startsWith("en") && (v.name.includes("Natural") || v.name.includes("Google") || v.name.includes("Samantha") || v.name.includes("Daniel"))
+            v.lang.startsWith("en") && (v.name.includes("Natural") || v.name.includes("Google") || v.name.includes("Samantha") || v.name.includes("Daniel") || v.name.includes("Arthur"))
         ) || voices.find(v => v.lang.startsWith("en"));
 
         if (preferredVoice) utterance.voice = preferredVoice;
 
-        // Tune speech pitch based on emotion
         if (emotion === "happy") {
             utterance.pitch = 1.15;
             utterance.rate = 1.05;
@@ -177,7 +258,7 @@ class EchoVoiceEngine {
         
         // Simulated rhythmic pulse when speaking without AudioContext
         if (this.isSpeaking) {
-            return 0.35 + Math.sin(Date.now() * 0.012) * 0.25;
+            return 0.35 + Math.sin(Date.now() * 0.015) * 0.25;
         }
 
         return 0;

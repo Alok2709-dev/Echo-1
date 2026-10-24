@@ -1,6 +1,6 @@
 /* ==========================================================
    ECHO — MAIN CONTROLLER & APPLE-GRADE INTERACTION ENGINE
-   Zero-dependency, 100% offline & file:// protocol compatible
+   Full integration with Ambient Music, Dashboard & JARVIS
 ========================================================== */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -11,11 +11,71 @@ document.addEventListener("DOMContentLoaded", () => {
     const micBtn = document.getElementById("micBtn");
     const memoryBtn = document.getElementById("memoryBtn");
     const settingsBtn = document.getElementById("settingsBtn");
+    const dashboardBtn = document.getElementById("dashboardBtn");
     const soundToggleBtn = document.getElementById("soundToggleBtn");
     const memoryModal = document.getElementById("memoryModal");
     const settingsModal = document.getElementById("settingsModal");
     const clockDisplay = document.getElementById("hudClock");
     const quickPrompts = document.querySelectorAll(".quick-chip");
+
+    // Music Deck UI Elements
+    const musicPlayBtn = document.getElementById("musicPlayBtn");
+    const musicNextBtn = document.getElementById("musicNextBtn");
+
+    if (musicPlayBtn && window.echoMusic) {
+        musicPlayBtn.addEventListener("click", () => {
+            window.echoMusic.toggle();
+            if (window.echoSounds) window.echoSounds.playListenTick();
+        });
+    }
+
+    if (musicNextBtn && window.echoMusic) {
+        musicNextBtn.addEventListener("click", () => {
+            window.echoMusic.nextTrack();
+            if (window.echoSounds) window.echoSounds.playListenTick();
+        });
+    }
+
+    // Dashboard Toggle Button
+    if (dashboardBtn && window.echoDashboard) {
+        dashboardBtn.addEventListener("click", () => {
+            window.echoDashboard.toggle();
+        });
+    }
+
+    const ccCloseBtn = document.getElementById("ccCloseBtn");
+    if (ccCloseBtn && window.echoDashboard) {
+        ccCloseBtn.addEventListener("click", () => {
+            window.echoDashboard.toggle();
+        });
+    }
+
+    // Add Task / Event Inputs inside Control Center
+    const btnAddTask = document.getElementById("btnAddTask");
+    const inputAddTask = document.getElementById("inputAddTask");
+    if (btnAddTask && inputAddTask && window.echoDashboard) {
+        btnAddTask.addEventListener("click", () => {
+            if (inputAddTask.value.trim()) {
+                window.echoDashboard.addTask(inputAddTask.value.trim());
+                inputAddTask.value = "";
+                if (window.echoSounds) window.echoSounds.playResponseChime();
+            }
+        });
+    }
+
+    const btnAddEvent = document.getElementById("btnAddEvent");
+    const inputEventTitle = document.getElementById("inputEventTitle");
+    const inputEventTime = document.getElementById("inputEventTime");
+    if (btnAddEvent && inputEventTitle && window.echoDashboard) {
+        btnAddEvent.addEventListener("click", () => {
+            if (inputEventTitle.value.trim()) {
+                const time = inputEventTime && inputEventTime.value.trim() ? inputEventTime.value.trim() : "12:00 PM";
+                window.echoDashboard.addEvent(time, inputEventTitle.value.trim());
+                inputEventTitle.value = "";
+                if (window.echoSounds) window.echoSounds.playResponseChime();
+            }
+        });
+    }
 
     // Sound toggle state
     let soundEnabled = true;
@@ -38,7 +98,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setInterval(updateClock, 1000);
     updateClock();
 
-    // Smooth Typewriter effect for dialogue
+    // Typewriter effect for dialogue
     let typeTimeout = null;
     function displayDialogue(speaker, text) {
         if (dialogueSpeaker) dialogueSpeaker.textContent = speaker.toUpperCase();
@@ -62,11 +122,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!message || !message.trim()) return;
         const trimmed = message.trim();
 
-        // Display user query
         displayDialogue("You", trimmed);
         if (commandInput) commandInput.value = "";
 
-        // Shift core to thinking state
         if (window.echoCore) window.echoCore.setEmotion("thinking");
 
         try {
@@ -106,7 +164,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Quick Action Prompt Chips (Click to ask instantly)
+    // Quick Action Prompt Chips
     quickPrompts.forEach(chip => {
         chip.addEventListener("click", () => {
             const query = chip.getAttribute("data-prompt") || chip.textContent.trim();
@@ -148,7 +206,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Emotion Pills (Right-hand manual switcher)
+    // Emotion Pills
     document.querySelectorAll(".emotion-pill").forEach(pill => {
         pill.addEventListener("click", () => {
             const emote = pill.getAttribute("data-emotion");
@@ -195,23 +253,36 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Settings Modal Setup
+    // Settings Modal Setup (Gemini + ElevenLabs)
     if (settingsBtn && settingsModal) {
         const apiKeyInput = document.getElementById("apiKeyInput");
+        const elevenKeyInput = document.getElementById("elevenKeyInput");
+        const elevenVoiceSelect = document.getElementById("elevenVoiceSelect");
         const saveSettingsBtn = document.getElementById("saveSettingsBtn");
 
         settingsBtn.addEventListener("click", () => {
             if (apiKeyInput && window.echoBrain) {
                 apiKeyInput.value = window.echoBrain.getApiKey();
             }
+            if (elevenKeyInput && window.echoVoice) {
+                elevenKeyInput.value = window.echoVoice.elevenLabsKey || "";
+            }
+            if (elevenVoiceSelect && window.echoVoice) {
+                elevenVoiceSelect.value = window.echoVoice.elevenLabsVoiceId || "21m00Tcm4TlvDq8ikWAM";
+            }
             settingsModal.classList.add("active");
         });
 
-        if (saveSettingsBtn && apiKeyInput) {
+        if (saveSettingsBtn) {
             saveSettingsBtn.addEventListener("click", () => {
-                window.echoBrain.setApiKey(apiKeyInput.value);
+                if (window.echoBrain && apiKeyInput) {
+                    window.echoBrain.setApiKey(apiKeyInput.value);
+                }
+                if (window.echoVoice && elevenKeyInput && elevenVoiceSelect) {
+                    window.echoVoice.setElevenLabsKey(elevenKeyInput.value, elevenVoiceSelect.value);
+                }
                 settingsModal.classList.remove("active");
-                displayDialogue("Echo", "Neural API configurations locked in. All cognition pipelines active.");
+                displayDialogue("Echo", "Neural configurations locked in. All pipelines calibrated.");
                 if (window.echoSounds) window.echoSounds.playResponseChime();
             });
         }
@@ -230,13 +301,13 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Boot complete activation & welcome greeting
+    // Boot complete activation & proactive welcome greeting
     window.activateEcho = function() {
-        const userName = window.echoMemory ? window.echoMemory.getUserName() : "User";
-        displayDialogue("Echo", `Neural connection online. Greetings, ${userName}. What shall we explore today?`);
+        const greeting = window.echoProactive ? window.echoProactive.getTimeGreeting() : "Neural connection online.";
+        displayDialogue("Echo", greeting);
         if (window.echoSounds) window.echoSounds.playWakeChime();
         if (window.echoVoice) {
-            window.echoVoice.speak(`Neural connection online. Greetings, ${userName}. What shall we explore today?`, "happy");
+            window.echoVoice.speak(greeting, "happy");
         }
     };
 });
