@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     revealFile: (filePath) => ipcRenderer.invoke('fs:reveal-file', { filePath }),
     runCmd: (command) => ipcRenderer.invoke('os:run-cmd', { command }),
     setClipboard: (text) => ipcRenderer.invoke('os:clipboard', text),
+    speakNative: (text) => ipcRenderer.invoke('os:speak', text),
     onModeChanged: (callback) => ipcRenderer.on('mode:changed', (event, mode) => callback(mode)),
     onNativeVoiceTranscript: (callback) => ipcRenderer.on('voice:native-transcript', (event, data) => callback(data)),
     onVoiceStatus: (callback) => ipcRenderer.on('voice:status', (event, data) => callback(data))

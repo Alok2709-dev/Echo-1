@@ -489,6 +489,45 @@ document.addEventListener("DOMContentLoaded", () => {
             openaiKeyInput.addEventListener("focus", () => { aiProviderSelect.value = "openai"; });
         }
 
+        // Live Groq Models Catalog Fetcher
+        const btnRefreshGroqModels = document.getElementById("btnRefreshGroqModels");
+        async function refreshGroqModelsList(key) {
+            if (!window.echoBrain) return;
+            const targetKey = key || (groqKeyInput ? groqKeyInput.value.trim() : "");
+            if (!targetKey) return;
+            if (aiTestFeedback) {
+                aiTestFeedback.textContent = "Connecting to Groq catalog...";
+                aiTestFeedback.style.color = "#00e5ff";
+            }
+            const models = await window.echoBrain.fetchGroqModels(targetKey);
+            if (models && models.length > 0 && groqModelSelect) {
+                const currentVal = groqModelSelect.value;
+                groqModelSelect.innerHTML = "";
+                models.forEach(m => {
+                    const opt = document.createElement("option");
+                    opt.value = m;
+                    opt.textContent = m;
+                    if (m === currentVal || m === "llama-3.3-70b-versatile") opt.selected = true;
+                    groqModelSelect.appendChild(opt);
+                });
+                if (aiTestFeedback) {
+                    aiTestFeedback.textContent = `🟢 Loaded ${models.length} active Groq models!`;
+                    aiTestFeedback.style.color = "#10b981";
+                }
+            }
+        }
+
+        if (btnRefreshGroqModels) {
+            btnRefreshGroqModels.addEventListener("click", () => refreshGroqModelsList());
+        }
+        if (groqKeyInput) {
+            groqKeyInput.addEventListener("blur", () => {
+                if (groqKeyInput.value.trim().length > 20) {
+                    refreshGroqModelsList(groqKeyInput.value.trim());
+                }
+            });
+        }
+
         // Test Voice buttons
         const btnTestVoice = document.getElementById("btnTestVoice");
         const btnTestSystemVoice = document.getElementById("btnTestSystemVoice");

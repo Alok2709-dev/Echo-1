@@ -37,6 +37,11 @@ class EchoVoiceEngine {
         this.restartTimer = null;
         this.silenceTimer = null;
 
+        // In-app direct audio recording for Groq Whisper
+        this.mediaRecorder = null;
+        this.recordedChunks = [];
+        this.isRecordingDirectAudio = false;
+
         this.wakePatterns = [
             /\bhey\s+echo\b/i,
             /\bok\s+echo\b/i,
@@ -127,6 +132,7 @@ class EchoVoiceEngine {
                 return;
             }
         }
+    }
 
     initVoices() {
         if (!this.synth) return;
@@ -314,10 +320,68 @@ class EchoVoiceEngine {
         }, 800);
     }
 
+    // Direct In-App Audio Capture for Groq Whisper (Zero lag, works 100% inside Electron)
+    async startDirectAudioRecording() {
+        try {
+            await this.startMicStream();
+            if (!this.micStream) return;
+
+            this.recordedChunks = [];
+            const mimeType = (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/webm;codecs=opus'))
+                ? 'audio/webm;codecs=opus'
+                : ((typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/webm')) ? 'audio/webm' : '');
+
+            const options = mimeType ? { mimeType } : {};
+            this.mediaRecorder = new MediaRecorder(this.micStream, options);
+
+            this.mediaRecorder.ondataavailable = (e) => {
+                if (e.data && e.data.size > 0) {
+                    this.recordedChunks.push(e.data);
+                }
+            };
+
+            this.mediaRecorder.onstop = async () => {
+                this.isRecordingDirectAudio = false;
+                if (this.recordedChunks.length === 0) return;
+                const audioBlob = new Blob(this.recordedChunks, { type: this.mediaRecorder.mimeType || 'audio/webm' });
+                this.recordedChunks = [];
+
+                if (window.echoBrain && window.echoBrain.groqKey && audioBlob.size > 2000) {
+                    try {
+                        if (this.onInterimCallback) this.onInterimCallback("Transcribing voice via Groq Whisper ⚡...");
+                        const transcript = await window.echoBrain.transcribeAudioWithGroq(audioBlob);
+                        if (transcript && transcript.trim()) {
+                            let cleaned = transcript.trim();
+                            for (let pattern of this.wakePatterns) {
+                                cleaned = cleaned.replace(pattern, "").trim();
+                            }
+                            this.dispatchCommand(cleaned || transcript.trim());
+                        }
+                    } catch (err) {
+                        console.warn("[EchoVoice] Groq Whisper transcription fallback:", err);
+                    }
+                }
+            };
+
+            this.mediaRecorder.start(200);
+            this.isRecordingDirectAudio = true;
+        } catch (e) {
+            console.warn("[EchoVoice] MediaRecorder capture error:", e);
+        }
+    }
+
+    stopDirectAudioRecording() {
+        if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+            try { this.mediaRecorder.stop(); } catch (e) {}
+        }
+        this.isRecordingDirectAudio = false;
+    }
+
     // Trigger command mode directly (e.g. mic button or spacebar)
     toggleListening() {
         this.startMicStream();
         if (this.listenMode === 'command') {
+            this.stopDirectAudioRecording();
             this.listenMode = 'wakeword';
             if (this.onStateChangeCallback) this.onStateChangeCallback('idle');
             return false;
@@ -326,6 +390,7 @@ class EchoVoiceEngine {
             this.listenMode = 'command';
             if (this.onStateChangeCallback) this.onStateChangeCallback('listening');
             if (window.echoSounds) window.echoSounds.playListenTick();
+            this.startDirectAudioRecording();
             return true;
         }
     }
@@ -348,16 +413,18 @@ class EchoVoiceEngine {
             // Keep command mode active for follow-up instruction
             this.listenMode = 'command';
             if (this.onStateChangeCallback) this.onStateChangeCallback('listening');
+            this.startDirectAudioRecording();
         });
     }
 
     dispatchCommand(text) {
         clearTimeout(this.silenceTimer);
+        this.stopDirectAudioRecording();
         this.listenMode = 'wakeword'; // Reset to background wake word mode
         if (this.onStateChangeCallback) this.onStateChangeCallback('idle');
 
-        if (this.onTranscriptCallback) {
-            this.onTranscriptCallback(text);
+        if (this.onTranscriptCallback && text && text.trim()) {
+            this.onTranscriptCallback(text.trim());
         }
     }
 
@@ -520,13 +587,8 @@ class EchoVoiceEngine {
         await audio.play();
     }
 
-    // Expressive Human Cadence with Micro-Intonation & Natural Breathing
+    // Expressive Human Cadence with Micro-Intonation & Bulletproof Windows Native SAPI Fallback
     speakNaturalHuman(fullText, emotion = "idle", onEnd = null) {
-        if (!this.synth) {
-            if (onEnd) onEnd();
-            return;
-        }
-
         // Clean out emotion tags [happy], markdown asterisks, hashes
         const cleanText = fullText
             .replace(/\[(idle|happy|thinking|alert|speaking)\]/gi, "")
@@ -536,6 +598,30 @@ class EchoVoiceEngine {
 
         if (!cleanText) {
             if (onEnd) onEnd();
+            return;
+        }
+
+        const finish = () => {
+            this.isSpeaking = false;
+            this.activeUtterance = null;
+            if (onEnd) onEnd();
+            if (this.onStateChangeCallback) this.onStateChangeCallback("idle");
+            this.scheduleRestart();
+        };
+
+        const fallbackToNativeOS = () => {
+            if (typeof window.electronAPI !== "undefined" && window.electronAPI.speakNative) {
+                console.log("[EchoVoice] Invoking Native Windows SAPI Speech.");
+                this.isSpeaking = true;
+                if (this.onStateChangeCallback) this.onStateChangeCallback("speaking");
+                window.electronAPI.speakNative(cleanText).finally(finish);
+            } else {
+                finish();
+            }
+        };
+
+        if (!this.synth) {
+            fallbackToNativeOS();
             return;
         }
 
@@ -568,23 +654,42 @@ class EchoVoiceEngine {
         if (this.onStateChangeCallback) this.onStateChangeCallback("speaking");
         this.activeUtterance = utterance; // Prevent garbage collection in Chromium
 
-        utterance.onend = () => {
-            this.isSpeaking = false;
-            this.activeUtterance = null;
-            if (onEnd) onEnd();
-            if (this.onStateChangeCallback) this.onStateChangeCallback("idle");
-            this.scheduleRestart();
+        let hasStarted = false;
+        utterance.onstart = () => {
+            hasStarted = true;
         };
+
+        utterance.onend = finish;
 
         utterance.onerror = (e) => {
-            console.warn("[EchoVoice] Synth error:", e);
-            this.isSpeaking = false;
-            this.activeUtterance = null;
-            if (onEnd) onEnd();
-            if (this.onStateChangeCallback) this.onStateChangeCallback("idle");
+            console.warn("[EchoVoice] Synth error, falling back to Native SAPI:", e);
+            if (!hasStarted) {
+                fallbackToNativeOS();
+            } else {
+                finish();
+            }
         };
 
-        this.synth.speak(utterance);
+        // Safety watchdog: If Chromium synthesizer fails to emit audio within 700ms, use Native Windows SAPI
+        const watchdog = setTimeout(() => {
+            if (!hasStarted && this.isSpeaking) {
+                console.warn("[EchoVoice] Chromium SpeechSynthesis silent/stalled. Activating Native Windows SAPI Voice.");
+                try { this.synth.cancel(); } catch (e) {}
+                fallbackToNativeOS();
+            }
+        }, 700);
+
+        utterance.onstart = () => {
+            hasStarted = true;
+            clearTimeout(watchdog);
+        };
+
+        try {
+            this.synth.speak(utterance);
+        } catch (err) {
+            clearTimeout(watchdog);
+            fallbackToNativeOS();
+        }
     }
 
     getAudioLevel() {

@@ -12,10 +12,19 @@ class EchoBrain {
     constructor() {
         this.provider = localStorage.getItem("echo_ai_provider") || "groq";
         this.groqKey = localStorage.getItem("echo_groq_api_key") || "";
-        this.groqModel = localStorage.getItem("echo_groq_model") || "llama-3.3-70b-versatile";
+
+        // Auto-heal decommissioned Groq models from legacy cache
+        const savedGroqModel = localStorage.getItem("echo_groq_model");
+        const decommissioned = ["llama-3.1-8b-instant", "llama-3.1-70b-versatile", "mixtral-8x7b-32768", "llama3-70b-8192", "llama3-8b-8192"];
+        if (!savedGroqModel || decommissioned.includes(savedGroqModel)) {
+            this.groqModel = "llama-3.3-70b-versatile";
+            localStorage.setItem("echo_groq_model", "llama-3.3-70b-versatile");
+        } else {
+            this.groqModel = savedGroqModel;
+        }
         
         this.geminiKey = localStorage.getItem("echo_gemini_api_key") || "";
-        this.geminiModel = localStorage.getItem("echo_gemini_model") || "gemini-2.0-flash";
+        this.geminiModel = localStorage.getItem("echo_gemini_model") || "gemini-1.5-flash";
 
         this.openaiKey = localStorage.getItem("echo_openai_api_key") || "";
         this.openaiModel = localStorage.getItem("echo_openai_model") || "gpt-4o-mini";
@@ -885,17 +894,71 @@ Example: "[happy] I'm right here with you, Alok. All neural threads are running 
         return { emotion, text: cleaned };
     }
 
-    // 1. GROQ API (Lightning Fast Inference with auto-fallback models)
+    // Fetch dynamic live model list from Groq catalog
+    async fetchGroqModels(apiKey) {
+        const cleanKey = (apiKey || this.groqKey || "").trim().replace(/^["']|["']$/g, '');
+        if (!cleanKey) return [];
+        try {
+            const res = await fetch("https://api.groq.com/openai/v1/models", {
+                headers: { "Authorization": `Bearer ${cleanKey}` }
+            });
+            if (!res.ok) return [];
+            const data = await res.json();
+            const activeModels = (data.data || [])
+                .filter(m => m.active !== false && !m.id.includes("whisper") && !m.id.includes("embed"))
+                .map(m => m.id);
+            return activeModels;
+        } catch (e) {
+            console.warn("[EchoBrain] Could not fetch Groq models list:", e);
+            return [];
+        }
+    }
+
+    // Direct Whisper Speech-to-Text Transcription via Groq
+    async transcribeAudioWithGroq(audioBlob) {
+        const cleanKey = (this.groqKey || "").trim().replace(/^["']|["']$/g, '');
+        if (!cleanKey) throw new Error("No Groq API Key available for Whisper speech transcription.");
+
+        const formData = new FormData();
+        formData.append("file", audioBlob, "speech.webm");
+        formData.append("model", "whisper-large-v3-turbo");
+        formData.append("temperature", "0");
+        formData.append("response_format", "json");
+
+        const res = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${cleanKey}`
+            },
+            body: formData
+        });
+
+        if (!res.ok) {
+            const err = await res.json().catch(() => null);
+            throw new Error(err?.error?.message || `Whisper transcription error: HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        return data.text ? data.text.trim() : "";
+    }
+
+    // 1. GROQ API (Lightning Fast Inference with auto-healing decommissioned models)
     async callGroq(userInput, memory) {
         const cleanKey = (this.groqKey || "").trim().replace(/^["']|["']$/g, '');
         if (!cleanKey) throw new Error("Please enter your Groq API Key.");
 
         const messages = this.buildPrompt(userInput, memory);
-        const modelsToTry = [
-            this.groqModel || "llama-3.3-70b-versatile",
-            "llama-3.1-8b-instant",
-            "mixtral-8x7b-32768"
-        ];
+        
+        // Priority list of models with guaranteed active fallbacks
+        const candidateModels = [
+            this.groqModel,
+            "llama-3.3-70b-versatile",
+            "llama-3.2-11b-vision-preview",
+            "llama-3.2-3b-preview",
+            "deepseek-r1-distill-llama-70b",
+            "gemma2-9b-it"
+        ].filter(Boolean);
+        const modelsToTry = [...new Set(candidateModels)];
 
         let lastError = null;
         for (const model of modelsToTry) {
@@ -909,16 +972,25 @@ Example: "[happy] I'm right here with you, Alok. All neural threads are running 
                     body: JSON.stringify({
                         model: model,
                         messages: messages,
-                        max_tokens: 180,
-                        temperature: 0.8
+                        max_tokens: 220,
+                        temperature: 0.75
                     })
                 });
 
                 if (!res.ok) {
                     const errJson = await res.json().catch(() => null);
                     const msg = errJson?.error?.message || `HTTP ${res.status}`;
-                    if (res.status === 404) {
-                        lastError = new Error(`Model ${model} not available: ${msg}`);
+                    const lowerMsg = msg.toLowerCase();
+                    const isModelUnavailable = res.status === 404 || 
+                        lowerMsg.includes("decommissioned") || 
+                        lowerMsg.includes("not supported") || 
+                        lowerMsg.includes("deprecated") || 
+                        lowerMsg.includes("model_not_found") || 
+                        lowerMsg.includes("does not exist");
+
+                    if (isModelUnavailable) {
+                        console.warn(`[EchoBrain] Groq model "${model}" is decommissioned or unavailable: ${msg}. Switching to next model...`);
+                        lastError = new Error(msg);
                         continue;
                     }
                     throw new Error(msg);
@@ -926,10 +998,23 @@ Example: "[happy] I'm right here with you, Alok. All neural threads are running 
 
                 const data = await res.json();
                 const content = data.choices?.[0]?.message?.content || "";
+
+                // Auto-heal active model so subsequent calls are zero-lag
+                if (model !== this.groqModel) {
+                    this.groqModel = model;
+                    localStorage.setItem("echo_groq_model", model);
+                    const groqSelect = document.getElementById("groqModelSelect");
+                    if (groqSelect) groqSelect.value = model;
+                }
+
                 return this.parseEmotionText(content);
             } catch (err) {
                 lastError = err;
-                if (!err.message.includes("404")) throw err;
+                const lower = err.message.toLowerCase();
+                if (lower.includes("decommissioned") || lower.includes("not supported") || lower.includes("404")) {
+                    continue;
+                }
+                throw err;
             }
         }
         throw lastError;
@@ -940,11 +1025,13 @@ Example: "[happy] I'm right here with you, Alok. All neural threads are running 
         const cleanKey = (this.geminiKey || this.apiKey || "").trim().replace(/^["']|["']$/g, '');
         if (!cleanKey) throw new Error("Please enter your Google Gemini API Key.");
 
-        const modelsToTry = [
-            this.geminiModel || "gemini-1.5-flash",
+        const candidateModels = [
+            this.geminiModel,
             "gemini-1.5-flash",
-            "gemini-2.0-flash"
-        ];
+            "gemini-2.0-flash",
+            "gemini-1.5-pro"
+        ].filter(Boolean);
+        const modelsToTry = [...new Set(candidateModels)];
 
         const userName = memory ? memory.getUserName() : "Alok";
         const facts = memory ? memory.getFacts().join("; ") : "";
@@ -1065,23 +1152,29 @@ Example: "[happy] I'm right here with you, Alok. All neural threads are running 
     async testProvider(provider) {
         const start = performance.now();
         try {
+            let replyText = "";
             if (provider === "groq") {
                 if (!this.groqKey) throw new Error("No Groq API Key entered.");
-                await this.callGroq("Ping test", null);
+                const res = await this.callGroq("Respond in 5 words: Status check.", null);
+                replyText = ` (${this.groqModel}): "${res.text}"`;
             } else if (provider === "gemini") {
                 if (!this.geminiKey && !this.apiKey) throw new Error("No Gemini API Key entered.");
-                await this.callGemini("Ping test", null);
+                const res = await this.callGemini("Respond in 5 words: Status check.", null);
+                replyText = ` (${this.geminiModel}): "${res.text}"`;
             } else if (provider === "openai") {
                 if (!this.openaiKey) throw new Error("No OpenAI API Key entered.");
-                await this.callOpenAI("Ping test", null);
+                const res = await this.callOpenAI("Respond in 5 words: Status check.", null);
+                replyText = ` (${this.openaiModel}): "${res.text}"`;
             } else if (provider === "ollama") {
-                await this.callOllama("Ping test", null);
+                const res = await this.callOllama("Respond in 5 words: Status check.", null);
+                replyText = ` (${this.ollamaModel}): "${res.text}"`;
             } else if (provider === "custom") {
                 if (!this.customUrl) throw new Error("No Custom Endpoint URL entered.");
-                await this.callCustom("Ping test", null);
+                const res = await this.callCustom("Respond in 5 words: Status check.", null);
+                replyText = `: "${res.text}"`;
             }
             const latency = Math.round(performance.now() - start);
-            return { success: true, latency, message: `Connected to ${provider.toUpperCase()} in ${latency}ms!` };
+            return { success: true, latency, message: `Connected to ${provider.toUpperCase()}${replyText} [${latency}ms]` };
         } catch (e) {
             return { success: false, error: e.message };
         }

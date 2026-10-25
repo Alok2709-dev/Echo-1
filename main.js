@@ -5,7 +5,6 @@ const fs = require('fs');
 const http = require('http');
 
 // Enable Speech and Audio permissions for Electron
-app.commandLine.appendSwitch('enable-speech-dispatcher');
 app.commandLine.appendSwitch('use-fake-ui-for-media-stream');
 app.commandLine.appendSwitch('enable-features', 'SpeechRecognition,MediaStreamTrack');
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
@@ -352,6 +351,31 @@ ipcMain.handle('os:run-cmd', async (event, { command }) => {
 ipcMain.handle('os:clipboard', (event, text) => {
     clipboard.writeText(text);
     return { success: true, message: `Copied to clipboard: "${text}"` };
+});
+
+// Bulletproof Native Windows SAPI Speech Synthesis IPC
+ipcMain.handle('os:speak', async (event, text) => {
+    return new Promise((resolve) => {
+        if (!text || typeof text !== 'string') return resolve({ success: false });
+        const clean = text
+            .replace(/\[(idle|happy|thinking|alert|speaking)\]/gi, '')
+            .replace(/[*_#`~>]/g, '')
+            .replace(/["'`$\\]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        if (!clean) return resolve({ success: false });
+
+        const psScript = `
+            Add-Type -AssemblyName System.Speech;
+            $synth = New-Object System.Speech.Synthesis.SpeechSynthesizer;
+            $synth.Rate = 1;
+            $synth.Speak([string]"${clean.substring(0, 300)}");
+        `;
+        exec(`powershell -NoProfile -NonInteractive -Command "${psScript.replace(/\n/g, ' ')}"`, (err) => {
+            if (err) resolve({ success: false, error: err.message });
+            else resolve({ success: true });
+        });
+    });
 });
 
 // Screen Vision / Capture IPC
@@ -751,11 +775,13 @@ function launchVoiceEar(port) {
     const earArgs = [
         `--app=http://127.0.0.1:${port}/speech-bridge`,
         `--user-data-dir=${earProfileDir}`,
+        `--unsafely-treat-insecure-origin-as-secure=http://127.0.0.1:${port},http://localhost:${port}`,
         '--window-size=240,160',
         '--window-position=50,50',
         '--minimized',
         '--use-fake-ui-for-media-stream',
         '--autoplay-policy=no-user-gesture-required',
+        '--enable-features=SpeechRecognition',
         '--disable-background-timer-throttling',
         '--disable-backgrounding-occluded-windows',
         '--disable-renderer-backgrounding',
