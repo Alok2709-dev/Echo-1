@@ -206,6 +206,43 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // Dynamic Island double click to expand
+    if (islandBar) {
+        islandBar.addEventListener("dblclick", () => setIslandMode(false));
+    }
+
+    // AI Provider Badge in HUD -> Opens AI Settings directly
+    const hudAiBadge = document.getElementById("hudAiBadge");
+    if (hudAiBadge && settingsModal) {
+        hudAiBadge.addEventListener("click", () => {
+            if (settingsBtn) settingsBtn.click();
+            const brainTab = document.querySelector('.settings-tab-btn[data-tab="tab-intelligence"]');
+            if (brainTab) brainTab.click();
+        });
+    }
+
+    function updateAiBadges() {
+        if (!window.echoBrain) return;
+        const prov = window.echoBrain.getProvider();
+        const hudName = document.getElementById("hudAiName");
+        const islandChip = document.getElementById("islandAiChip");
+
+        const labels = {
+            groq: "Groq (Llama 3.3) ⚡",
+            gemini: "Gemini 2.0 ✨",
+            openai: "OpenAI GPT-4o 🧠",
+            ollama: "Ollama (Offline) 🏠",
+            custom: "Custom Endpoint 🌐",
+            offline: "Offline Brain 🤖"
+        };
+
+        const text = labels[prov] || "Groq ⚡";
+        if (hudName) hudName.textContent = text;
+        if (islandChip) islandChip.textContent = `AI: ${text.split(" ")[0]} ⚡`;
+    }
+
+    setTimeout(updateAiBadges, 300);
+
     // Settings Segmented Tabs Navigation
     document.querySelectorAll(".settings-tab-btn").forEach(btn => {
         btn.addEventListener("click", () => {
@@ -394,25 +431,127 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Settings Modal Setup (Gemini + ElevenLabs + Accounts)
+    // Settings Modal Setup (AI Hub + Voice + Desktop + Accounts)
     if (settingsBtn && settingsModal) {
         const userNameInput = document.getElementById("userNameInput");
         const apiKeyInput = document.getElementById("apiKeyInput");
+        const geminiModelSelect = document.getElementById("geminiModelSelect");
+        const groqKeyInput = document.getElementById("groqKeyInput");
+        const groqModelSelect = document.getElementById("groqModelSelect");
+        const openaiKeyInput = document.getElementById("openaiKeyInput");
+        const openaiModelSelect = document.getElementById("openaiModelSelect");
+        const ollamaUrlInput = document.getElementById("ollamaUrlInput");
+        const ollamaModelSelect = document.getElementById("ollamaModelSelect");
+        const customUrlInput = document.getElementById("customUrlInput");
+        const customKeyInput = document.getElementById("customKeyInput");
+        const customModelInput = document.getElementById("customModelInput");
+        const aiProviderSelect = document.getElementById("aiProviderSelect");
+        const btnTestAi = document.getElementById("btnTestAi");
+        const btnSaveAi = document.getElementById("btnSaveAi");
+        const aiTestFeedback = document.getElementById("aiTestFeedback");
+
+        const alwaysListenSwitch = document.getElementById("alwaysListenSwitch");
         const elevenKeyInput = document.getElementById("elevenKeyInput");
         const elevenVoiceSelect = document.getElementById("elevenVoiceSelect");
         const gcalUrlInput = document.getElementById("gcalUrlInput");
         const spotifyUriInput = document.getElementById("spotifyUriInput");
         const wakeWordSwitch = document.getElementById("wakeWordSwitch");
         const startupSwitch = document.getElementById("startupSwitch");
-        const ollamaModelSelect = document.getElementById("ollamaModelSelect");
         const saveSettingsBtn = document.getElementById("saveSettingsBtn");
+
+        // Provider switch UI handler
+        function showProviderBlock(provider) {
+            const blocks = {
+                groq: document.getElementById("blockGroq"),
+                gemini: document.getElementById("blockGemini"),
+                openai: document.getElementById("blockOpenAI"),
+                ollama: document.getElementById("blockOllama"),
+                custom: document.getElementById("blockCustom")
+            };
+            Object.values(blocks).forEach(b => { if (b) b.style.display = "none"; });
+            if (blocks[provider]) blocks[provider].style.display = "flex";
+        }
+
+        if (aiProviderSelect) {
+            aiProviderSelect.addEventListener("change", (e) => {
+                showProviderBlock(e.target.value);
+            });
+        }
+
+        // Test AI Connection button
+        if (btnTestAi) {
+            btnTestAi.addEventListener("click", async () => {
+                const currentProv = aiProviderSelect ? aiProviderSelect.value : "groq";
+                if (aiTestFeedback) {
+                    aiTestFeedback.textContent = `Connecting to ${currentProv.toUpperCase()}...`;
+                    aiTestFeedback.style.color = "#00e5ff";
+                }
+
+                // Temporary sync inputs before test
+                if (window.echoBrain) {
+                    if (groqKeyInput) window.echoBrain.setGroqKey(groqKeyInput.value, groqModelSelect ? groqModelSelect.value : null);
+                    if (apiKeyInput) window.echoBrain.setGeminiKey(apiKeyInput.value, geminiModelSelect ? geminiModelSelect.value : null);
+                    if (openaiKeyInput) window.echoBrain.setOpenAIKey(openaiKeyInput.value, openaiModelSelect ? openaiModelSelect.value : null);
+                    if (ollamaUrlInput) window.echoBrain.setOllamaConfig(ollamaUrlInput.value, ollamaModelSelect ? ollamaModelSelect.value : null);
+                    if (customUrlInput) window.echoBrain.setCustomConfig(customUrlInput.value, customKeyInput ? customKeyInput.value : null, customModelInput ? customModelInput.value : null);
+
+                    const testRes = await window.echoBrain.testProvider(currentProv);
+                    if (testRes.success) {
+                        aiTestFeedback.textContent = `🟢 ${testRes.message}`;
+                        aiTestFeedback.style.color = "#10b981";
+                    } else {
+                        aiTestFeedback.textContent = `🔴 ${testRes.error}`;
+                        aiTestFeedback.style.color = "#ef4444";
+                    }
+                }
+            });
+        }
+
+        function saveAllAISettings() {
+            if (!window.echoBrain) return;
+            const prov = aiProviderSelect ? aiProviderSelect.value : "groq";
+            window.echoBrain.setProvider(prov);
+            if (groqKeyInput) window.echoBrain.setGroqKey(groqKeyInput.value, groqModelSelect ? groqModelSelect.value : null);
+            if (apiKeyInput) window.echoBrain.setGeminiKey(apiKeyInput.value, geminiModelSelect ? geminiModelSelect.value : null);
+            if (openaiKeyInput) window.echoBrain.setOpenAIKey(openaiKeyInput.value, openaiModelSelect ? openaiModelSelect.value : null);
+            if (ollamaUrlInput) window.echoBrain.setOllamaConfig(ollamaUrlInput.value, ollamaModelSelect ? ollamaModelSelect.value : null);
+            if (customUrlInput) window.echoBrain.setCustomConfig(customUrlInput.value, customKeyInput ? customKeyInput.value : null, customModelInput ? customModelInput.value : null);
+            updateAiBadges();
+        }
+
+        if (btnSaveAi) {
+            btnSaveAi.addEventListener("click", () => {
+                saveAllAISettings();
+                if (aiTestFeedback) {
+                    aiTestFeedback.textContent = "🟢 AI Engine configured and activated!";
+                    aiTestFeedback.style.color = "#10b981";
+                }
+                if (window.echoSounds) window.echoSounds.playResponseChime();
+            });
+        }
 
         settingsBtn.addEventListener("click", async () => {
             if (userNameInput && window.echoMemory) {
                 userNameInput.value = window.echoMemory.getUserName();
             }
-            if (apiKeyInput && window.echoBrain) {
-                apiKeyInput.value = window.echoBrain.getApiKey();
+            if (window.echoBrain) {
+                if (aiProviderSelect) {
+                    aiProviderSelect.value = window.echoBrain.getProvider();
+                    showProviderBlock(window.echoBrain.getProvider());
+                }
+                if (groqKeyInput) groqKeyInput.value = window.echoBrain.groqKey || "";
+                if (groqModelSelect) groqModelSelect.value = window.echoBrain.groqModel || "llama-3.3-70b-versatile";
+                if (apiKeyInput) apiKeyInput.value = window.echoBrain.geminiKey || "";
+                if (geminiModelSelect) geminiModelSelect.value = window.echoBrain.geminiModel || "gemini-2.0-flash";
+                if (openaiKeyInput) openaiKeyInput.value = window.echoBrain.openaiKey || "";
+                if (openaiModelSelect) openaiModelSelect.value = window.echoBrain.openaiModel || "gpt-4o-mini";
+                if (ollamaUrlInput) ollamaUrlInput.value = window.echoBrain.ollamaUrl || "http://localhost:11434";
+                if (customUrlInput) customUrlInput.value = window.echoBrain.customUrl || "";
+                if (customKeyInput) customKeyInput.value = window.echoBrain.customKey || "";
+                if (customModelInput) customModelInput.value = window.echoBrain.customModel || "";
+            }
+            if (alwaysListenSwitch && window.echoVoice) {
+                alwaysListenSwitch.checked = window.echoVoice.alwaysListen;
             }
             if (elevenKeyInput && window.echoVoice) {
                 elevenKeyInput.value = window.echoVoice.elevenLabsKey || "";
@@ -426,17 +565,11 @@ document.addEventListener("DOMContentLoaded", () => {
             if (spotifyUriInput && window.echoMusic) {
                 spotifyUriInput.value = window.echoMusic.spotifyUri || "";
             }
-            if (wakeWordSwitch && window.echoWakeWord) {
-                wakeWordSwitch.checked = window.echoWakeWord.isEnabled;
+            if (wakeWordSwitch && window.echoVoice) {
+                wakeWordSwitch.checked = window.echoVoice.isWakeWordActive;
             }
             if (startupSwitch && typeof window.electronAPI !== "undefined" && window.electronAPI.getStartup) {
                 startupSwitch.checked = await window.electronAPI.getStartup();
-            }
-            if (ollamaModelSelect && window.echoOllama) {
-                if (window.echoOllama.models && window.echoOllama.models.length > 0) {
-                    ollamaModelSelect.innerHTML = window.echoOllama.models.map(m => `<option value="${m}">${m}</option>`).join("");
-                }
-                ollamaModelSelect.value = window.echoOllama.activeModel;
             }
             settingsModal.classList.add("active");
         });
@@ -446,8 +579,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (window.echoMemory && userNameInput && userNameInput.value.trim()) {
                     window.echoMemory.setUserName(userNameInput.value.trim());
                 }
-                if (window.echoBrain && apiKeyInput) {
-                    window.echoBrain.setApiKey(apiKeyInput.value);
+                saveAllAISettings();
+
+                if (alwaysListenSwitch && window.echoVoice) {
+                    window.echoVoice.alwaysListen = alwaysListenSwitch.checked;
+                    localStorage.setItem("echo_always_listen", alwaysListenSwitch.checked ? "true" : "false");
                 }
                 if (window.echoVoice && elevenKeyInput && elevenVoiceSelect) {
                     window.echoVoice.setElevenLabsKey(elevenKeyInput.value, elevenVoiceSelect.value);
@@ -462,22 +598,17 @@ document.addEventListener("DOMContentLoaded", () => {
                     window.echoMusic.spotifyUri = spotifyUriInput.value.trim();
                     localStorage.setItem("echo_spotify_uri", window.echoMusic.spotifyUri);
                 }
-                if (wakeWordSwitch && window.echoWakeWord) {
-                    if (wakeWordSwitch.checked) window.echoWakeWord.enable();
-                    else window.echoWakeWord.stop();
+                if (wakeWordSwitch && window.echoVoice) {
+                    window.echoVoice.isWakeWordActive = wakeWordSwitch.checked;
+                    localStorage.setItem("echo_wakeword_enabled", wakeWordSwitch.checked ? "true" : "false");
                 }
                 if (startupSwitch && typeof window.electronAPI !== "undefined" && window.electronAPI.setStartup) {
                     await window.electronAPI.setStartup(startupSwitch.checked);
                 }
-                if (ollamaModelSelect && window.echoOllama) {
-                    window.echoOllama.activeModel = ollamaModelSelect.value;
-                    localStorage.setItem("echo_ollama_model", ollamaModelSelect.value);
-                    window.echoOllama.updateUIBadge();
-                }
 
                 settingsModal.classList.remove("active");
                 const name = window.echoMemory ? window.echoMemory.getUserName() : "Alok";
-                displayDialogue("Echo", `System preferences updated, ${name}! All neural parameters, wake word, and desktop bridges are active.`);
+                displayDialogue("Echo", `Preferences and AI Engine updated, ${name}! Your active brain is ready.`);
                 if (window.echoSounds) window.echoSounds.playResponseChime();
             });
         }

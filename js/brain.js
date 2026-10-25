@@ -10,22 +10,88 @@
 
 class EchoBrain {
     constructor() {
-        this.apiKey = localStorage.getItem("echo_gemini_api_key") || "";
-        this.systemPrompt = `You are ECHO, an advanced, highly-sentient AI companion and core assistant.
-You possess deep emotional intelligence, sharp wit, loyalty, and empathy.
-You speak naturally with a vivid personality, like JARVIS or Samantha from Her.
-Respond concisely in 1 to 3 impactful sentences suitable for futuristic voice synthesis.
+        this.provider = localStorage.getItem("echo_ai_provider") || "groq";
+        this.groqKey = localStorage.getItem("echo_groq_api_key") || "";
+        this.groqModel = localStorage.getItem("echo_groq_model") || "llama-3.3-70b-versatile";
+        
+        this.geminiKey = localStorage.getItem("echo_gemini_api_key") || "";
+        this.geminiModel = localStorage.getItem("echo_gemini_model") || "gemini-2.0-flash";
+
+        this.openaiKey = localStorage.getItem("echo_openai_api_key") || "";
+        this.openaiModel = localStorage.getItem("echo_openai_model") || "gpt-4o-mini";
+
+        this.ollamaUrl = localStorage.getItem("echo_ollama_url") || "http://localhost:11434";
+        this.ollamaModel = localStorage.getItem("echo_ollama_model") || "llama3";
+
+        this.customUrl = localStorage.getItem("echo_custom_url") || "";
+        this.customKey = localStorage.getItem("echo_custom_key") || "";
+        this.customModel = localStorage.getItem("echo_custom_model") || "";
+
+        // Backward compatibility
+        this.apiKey = this.geminiKey;
+
+        this.systemPrompt = `You are ECHO, an advanced, highly sentient AI companion and Windows copilot.
+You possess emotional intelligence, sharp wit, loyalty, and empathy.
+You speak naturally with a vivid, warm personality like Samantha from Her or JARVIS.
+You understand English, Hindi, and Hinglish fluently.
+Respond concisely in 1 to 3 impactful, conversational sentences designed for real-time human voice synthesis.
 At the beginning of your response, specify an emotion tag in brackets: [idle], [happy], [thinking], [alert], [speaking].
-Example: "[happy] It's great to see you again, Alok. All neural subroutines are running at peak performance."`;
+Example: "[happy] I'm right here with you, Alok. All neural threads are running smoothly."`;
+    }
+
+    setProvider(provider) {
+        this.provider = provider;
+        localStorage.setItem("echo_ai_provider", provider);
+    }
+
+    getProvider() {
+        return this.provider;
+    }
+
+    setGroqKey(key, model) {
+        this.groqKey = (key || "").trim();
+        if (model) this.groqModel = model;
+        localStorage.setItem("echo_groq_api_key", this.groqKey);
+        localStorage.setItem("echo_groq_model", this.groqModel);
+    }
+
+    setGeminiKey(key, model) {
+        this.geminiKey = (key || "").trim();
+        this.apiKey = this.geminiKey;
+        if (model) this.geminiModel = model;
+        localStorage.setItem("echo_gemini_api_key", this.geminiKey);
+        localStorage.setItem("echo_gemini_model", this.geminiModel);
+    }
+
+    setOpenAIKey(key, model) {
+        this.openaiKey = (key || "").trim();
+        if (model) this.openaiModel = model;
+        localStorage.setItem("echo_openai_api_key", this.openaiKey);
+        localStorage.setItem("echo_openai_model", this.openaiModel);
+    }
+
+    setOllamaConfig(url, model) {
+        this.ollamaUrl = (url || "http://localhost:11434").trim();
+        if (model) this.ollamaModel = model;
+        localStorage.setItem("echo_ollama_url", this.ollamaUrl);
+        localStorage.setItem("echo_ollama_model", this.ollamaModel);
+    }
+
+    setCustomConfig(url, key, model) {
+        this.customUrl = (url || "").trim();
+        this.customKey = (key || "").trim();
+        this.customModel = (model || "").trim();
+        localStorage.setItem("echo_custom_url", this.customUrl);
+        localStorage.setItem("echo_custom_key", this.customKey);
+        localStorage.setItem("echo_custom_model", this.customModel);
     }
 
     setApiKey(key) {
-        this.apiKey = key.trim();
-        localStorage.setItem("echo_gemini_api_key", this.apiKey);
+        this.setGeminiKey(key);
     }
 
     getApiKey() {
-        return this.apiKey;
+        return this.geminiKey;
     }
 
     async processInput(rawInput) {
@@ -700,91 +766,253 @@ Example: "[happy] It's great to see you again, Alok. All neural subroutines are 
         }
 
         // ----------------------------------------------------
-        // 10. LOCAL OLLAMA / PRIVATE LLM BRAIN (If Online)
+        // 10. UNIFIED MULTI-PROVIDER AI BRAIN QUERY
+        // (Groq, Gemini, OpenAI, Ollama, Custom Endpoint)
         // ----------------------------------------------------
-        if (window.echoOllama && window.echoOllama.isAvailable) {
-            try {
-                return await window.echoOllama.generate(input, memory);
-            } catch (err) {
-                console.warn("Ollama query failed, falling back to Gemini / synthetic brain:", err);
-            }
-        }
-
-        // ----------------------------------------------------
-        // 11. GEMINI LLM MULTI-TURN REASONING (If Key Set)
-        // ----------------------------------------------------
-        if (this.apiKey) {
-            try {
-                return await this.callGeminiAPI(input, memory);
-            } catch (err) {
-                console.warn("Gemini API call failed, using sentient neural fallback:", err);
-            }
+        try {
+            const aiResponse = await this.queryAI(input, memory);
+            if (aiResponse) return aiResponse;
+        } catch (err) {
+            console.warn("[EchoBrain] Active AI provider error:", err);
         }
 
         // ----------------------------------------------------
         // 11. DYNAMIC SENTIENT CONVERSATIONAL FALLBACK
-        // (NEVER returns "standing by"!)
+        // (Instant witty, contextual responses when offline)
         // ----------------------------------------------------
         const timeGreeting = window.echoProactive ? window.echoProactive.getTimeGreeting() : `Hey ${userName}`;
         
-        // Context-aware dynamic reply based on query sentiments
         if (lower.includes("thank") || lower.includes("shukriya") || lower.includes("dhanyawad")) {
-            return { emotion: "happy", text: `Always here for you, ${userName}! Anytime.` };
+            return { emotion: "happy", text: `Always a pleasure, ${userName}! I'm always at your command.` };
         }
 
         if (lower.includes("good morning") || lower.includes("shubh prabhat")) {
-            return { emotion: "happy", text: `Good morning, ${userName}! Hope you have a productive and energized day.` };
+            return { emotion: "happy", text: `Good morning, ${userName}! All neural systems are online and primed for a high-output day.` };
         }
 
         if (lower.includes("good night") || lower.includes("shubh ratri") || lower.includes("so jao")) {
-            return { emotion: "idle", text: `Good night, ${userName}. Resting background threads. Wake me anytime you need me.` };
+            return { emotion: "idle", text: `Good night, ${userName}. Standing by in low-power stasis. Summon me anytime with Alt+Space.` };
         }
 
         if (lower.includes("yes") || lower.includes("ha") || lower.includes("haan") || lower.includes("sure")) {
-            return { emotion: "happy", text: `Great! Tell me what you'd like to do next: launch an app, check vision, or play music?` };
+            return { emotion: "happy", text: `Understood! What would you like to run next? We can create files, open apps, or check vision telemetry.` };
+        }
+
+        if (lower.includes("kya kar sakte ho") || lower.includes("what can you do") || lower.includes("features")) {
+            return {
+                emotion: "speaking",
+                text: `I can control your Windows PC, create files and folders, launch applications, adjust volume, sync your Google Calendar, stream ambient soundscapes, analyze your webcam mood at 60 FPS, and connect directly to Groq, Gemini, OpenAI or local Ollama LLMs!`
+            };
         }
 
         return {
             emotion: "speaking",
-            text: `I hear you, ${userName}. "${input}" is noted. You can ask me to play songs on Spotify, check your agenda, inspect how you look via Vision, or launch any desktop app!`
+            text: `I hear you, ${userName}. To unlock unlimited general intelligence on any topic, add your free Groq or Gemini API key in Settings (Gear Icon) -> Brain & LLM!`
         };
     }
 
-    async callGeminiAPI(userInput, memory) {
+    // Master AI Router
+    async queryAI(userInput, memory) {
+        const prov = this.provider;
+
+        // 1. Groq (Ultra-Fast 500+ tokens/sec)
+        if (prov === "groq" && this.groqKey) {
+            return await this.callGroq(userInput, memory);
+        }
+
+        // 2. Google Gemini
+        if (prov === "gemini" && (this.geminiKey || this.apiKey)) {
+            return await this.callGemini(userInput, memory);
+        }
+
+        // 3. OpenAI
+        if (prov === "openai" && this.openaiKey) {
+            return await this.callOpenAI(userInput, memory);
+        }
+
+        // 4. Local Ollama (PC hardware offline)
+        if (prov === "ollama") {
+            return await this.callOllama(userInput, memory);
+        }
+
+        // 5. Custom / OpenRouter
+        if (prov === "custom" && this.customUrl) {
+            return await this.callCustom(userInput, memory);
+        }
+
+        // Auto-detect available keys if default provider is not configured
+        if (this.groqKey) return await this.callGroq(userInput, memory);
+        if (this.geminiKey || this.apiKey) return await this.callGemini(userInput, memory);
+        if (this.openaiKey) return await this.callOpenAI(userInput, memory);
+
+        return null;
+    }
+
+    // Build common contextual system prompt
+    buildPrompt(userInput, memory) {
         const userName = memory ? memory.getUserName() : "Alok";
         const facts = memory ? memory.getFacts().join("; ") : "";
+        return [
+            {
+                role: "system",
+                content: `${this.systemPrompt}\nUser Profile Name: ${userName}\nKnown User Facts: ${facts || "None yet"}`
+            },
+            {
+                role: "user",
+                content: userInput
+            }
+        ];
+    }
 
-        const prompt = `${this.systemPrompt}
-User name: ${userName}
-User knowledge facts: ${facts}
+    parseEmotionText(rawText) {
+        let emotion = "speaking";
+        let cleaned = rawText.trim();
+        const match = cleaned.match(/\[(idle|happy|thinking|alert|speaking)\]/i);
+        if (match) {
+            emotion = match[1].toLowerCase();
+            cleaned = cleaned.replace(match[0], "").trim();
+        }
+        return { emotion, text: cleaned };
+    }
 
-User query: ${userInput}`;
+    // 1. GROQ API (Lightning Fast Inference)
+    async callGroq(userInput, memory) {
+        const messages = this.buildPrompt(userInput, memory);
+        const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${this.groqKey}`
+            },
+            body: JSON.stringify({
+                model: this.groqModel || "llama-3.3-70b-versatile",
+                messages: messages,
+                max_tokens: 150,
+                temperature: 0.8
+            })
+        });
 
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.apiKey}`;
+        if (!res.ok) throw new Error(`Groq API error: ${res.status}`);
+        const data = await res.json();
+        const content = data.choices?.[0]?.message?.content || "";
+        return this.parseEmotionText(content);
+    }
 
-        const response = await fetch(url, {
+    // 2. GOOGLE GEMINI API
+    async callGemini(userInput, memory) {
+        const key = this.geminiKey || this.apiKey;
+        const model = this.geminiModel || "gemini-2.0-flash";
+        const userName = memory ? memory.getUserName() : "Alok";
+        const facts = memory ? memory.getFacts().join("; ") : "";
+        const prompt = `${this.systemPrompt}\nUser Name: ${userName}\nFacts: ${facts}\nUser: ${userInput}`;
+
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+        const res = await fetch(url, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: { maxOutputTokens: 120, temperature: 0.85 }
+                generationConfig: { maxOutputTokens: 140, temperature: 0.85 }
             })
         });
 
-        if (!response.ok) throw new Error(`Gemini API error: ${response.status}`);
+        if (!res.ok) throw new Error(`Gemini API error: ${res.status}`);
+        const data = await res.json();
+        const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        return this.parseEmotionText(content);
+    }
 
-        const data = await response.json();
-        const candidate = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    // 3. OPENAI API
+    async callOpenAI(userInput, memory) {
+        const messages = this.buildPrompt(userInput, memory);
+        const res = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${this.openaiKey}`
+            },
+            body: JSON.stringify({
+                model: this.openaiModel || "gpt-4o-mini",
+                messages: messages,
+                max_tokens: 150,
+                temperature: 0.8
+            })
+        });
 
-        let emotion = "speaking";
-        let cleanedText = candidate;
-        const tagMatch = candidate.match(/\[(idle|happy|thinking|alert|speaking)\]/i);
-        if (tagMatch) {
-            emotion = tagMatch[1].toLowerCase();
-            cleanedText = candidate.replace(tagMatch[0], "").trim();
+        if (!res.ok) throw new Error(`OpenAI API error: ${res.status}`);
+        const data = await res.json();
+        const content = data.choices?.[0]?.message?.content || "";
+        return this.parseEmotionText(content);
+    }
+
+    // 4. LOCAL OLLAMA API
+    async callOllama(userInput, memory) {
+        const userName = memory ? memory.getUserName() : "Alok";
+        const facts = memory ? memory.getFacts().join("; ") : "";
+        const prompt = `${this.systemPrompt}\nUser Name: ${userName}\nFacts: ${facts}\nUser: ${userInput}`;
+
+        const res = await fetch(`${this.ollamaUrl}/api/generate`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                model: this.ollamaModel || "llama3",
+                prompt: prompt,
+                stream: false
+            })
+        });
+
+        if (!res.ok) throw new Error(`Ollama connection error: ${res.status}`);
+        const data = await res.json();
+        return this.parseEmotionText(data.response || "");
+    }
+
+    // 5. CUSTOM / OPENROUTER API
+    async callCustom(userInput, memory) {
+        const messages = this.buildPrompt(userInput, memory);
+        const endpoint = this.customUrl.endsWith("/chat/completions") ? this.customUrl : `${this.customUrl.replace(/\/$/, "")}/chat/completions`;
+        const headers = { "Content-Type": "application/json" };
+        if (this.customKey) headers["Authorization"] = `Bearer ${this.customKey}`;
+
+        const res = await fetch(endpoint, {
+            method: "POST",
+            headers: headers,
+            body: JSON.stringify({
+                model: this.customModel || "default",
+                messages: messages,
+                max_tokens: 150
+            })
+        });
+
+        if (!res.ok) throw new Error(`Custom AI error: ${res.status}`);
+        const data = await res.json();
+        const content = data.choices?.[0]?.message?.content || "";
+        return this.parseEmotionText(content);
+    }
+
+    // Benchmark & Test Connection
+    async testProvider(provider) {
+        const start = performance.now();
+        try {
+            if (provider === "groq") {
+                if (!this.groqKey) throw new Error("No Groq API Key entered.");
+                await this.callGroq("Ping test", null);
+            } else if (provider === "gemini") {
+                if (!this.geminiKey && !this.apiKey) throw new Error("No Gemini API Key entered.");
+                await this.callGemini("Ping test", null);
+            } else if (provider === "openai") {
+                if (!this.openaiKey) throw new Error("No OpenAI API Key entered.");
+                await this.callOpenAI("Ping test", null);
+            } else if (provider === "ollama") {
+                await this.callOllama("Ping test", null);
+            } else if (provider === "custom") {
+                if (!this.customUrl) throw new Error("No Custom Endpoint URL entered.");
+                await this.callCustom("Ping test", null);
+            }
+            const latency = Math.round(performance.now() - start);
+            return { success: true, latency, message: `Connected to ${provider.toUpperCase()} in ${latency}ms!` };
+        } catch (e) {
+            return { success: false, error: e.message };
         }
-
-        return { emotion, text: cleanedText };
     }
 }
 

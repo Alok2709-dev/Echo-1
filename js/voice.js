@@ -30,6 +30,7 @@ class EchoVoiceEngine {
 
         this.elevenLabsKey = localStorage.getItem("echo_elevenlabs_api_key") || "";
         this.elevenLabsVoiceId = localStorage.getItem("echo_elevenlabs_voice_id") || "21m00Tcm4TlvDq8ikWAM"; // Rachel
+        this.alwaysListen = localStorage.getItem("echo_always_listen") === "true";
 
         this.currentAudioEl = null;
         this.cachedVoices = [];
@@ -37,12 +38,12 @@ class EchoVoiceEngine {
         this.silenceTimer = null;
 
         this.wakePatterns = [
-            /^hey\s+echo/i,
-            /^ok\s+echo/i,
-            /^hello\s+echo/i,
-            /^sun\s+echo/i,
-            /^suno\s+echo/i,
-            /^echo\b/i
+            /\bhey\s+echo\b/i,
+            /\bok\s+echo\b/i,
+            /\bhello\s+echo\b/i,
+            /\bsun\s+echo\b/i,
+            /\bsuno\b/i,
+            /\becho\b/i
         ];
 
         this.initVoices();
@@ -56,11 +57,23 @@ class EchoVoiceEngine {
     }
 
     initNativeVoiceBridge() {
-        if (typeof window.electronAPI !== "undefined" && window.electronAPI.onNativeVoiceTranscript) {
-            console.log("[EchoVoice] Attaching Windows Native Speech Ear Listener.");
-            window.electronAPI.onNativeVoiceTranscript((data) => {
-                this.handleNativeSpeech(data);
-            });
+        if (typeof window.electronAPI !== "undefined") {
+            if (window.electronAPI.onNativeVoiceTranscript) {
+                console.log("[EchoVoice] Attaching Windows Native Speech Ear Listener.");
+                window.electronAPI.onNativeVoiceTranscript((data) => {
+                    this.handleNativeSpeech(data);
+                });
+            }
+            if (window.electronAPI.onVoiceStatus) {
+                window.electronAPI.onVoiceStatus((status) => {
+                    console.log("[EchoVoice] Native voice status:", status);
+                    const indicator = document.getElementById("nativeVoiceIndicator");
+                    if (indicator) {
+                        indicator.classList.toggle("connected", status.active);
+                        indicator.title = status.message || "Windows Speech Ear Active";
+                    }
+                });
+            }
         }
     }
 
@@ -71,40 +84,49 @@ class EchoVoiceEngine {
         const active = (finalText || interimText).trim();
         if (!active) return;
 
-        // 1. WAKE WORD DETECTION (Idle background ear)
-        if (this.listenMode === 'wakeword') {
-            for (let pattern of this.wakePatterns) {
-                if (pattern.test(active)) {
-                    console.log(`[EchoVoice-Native] Wake word triggered: "${active}"`);
-                    this.listenMode = 'command';
-                    if (this.onStateChangeCallback) this.onStateChangeCallback('listening');
-                    if (window.echoSounds) window.echoSounds.playWakeChime();
-
-                    const remaining = active.replace(pattern, "").trim().replace(/^[,.]/, "").trim();
-                    if (remaining.length > 2) {
-                        this.dispatchCommand(remaining);
-                    } else {
-                        this.acknowledgeWake();
-                    }
-                    return;
-                }
-            }
-        } 
-        // 2. ACTIVE COMMAND CAPTURE
-        else if (this.listenMode === 'command') {
+        // 1. ALWAYS-LISTEN MODE OR ACTIVE COMMAND MODE (Direct execution without needing 'Hey Echo')
+        if (this.alwaysListen || this.listenMode === 'command') {
             if (this.onInterimCallback && active) {
                 this.onInterimCallback(active);
             }
             if (finalText) {
-                this.dispatchCommand(finalText);
+                let cleaned = finalText;
+                for (let pattern of this.wakePatterns) {
+                    cleaned = cleaned.replace(pattern, "").trim();
+                }
+                this.dispatchCommand(cleaned || finalText);
             } else {
                 clearTimeout(this.silenceTimer);
                 this.silenceTimer = setTimeout(() => {
-                    if (interimText) this.dispatchCommand(interimText);
+                    if (interimText) {
+                        let cleaned = interimText;
+                        for (let pattern of this.wakePatterns) {
+                            cleaned = cleaned.replace(pattern, "").trim();
+                        }
+                        this.dispatchCommand(cleaned || interimText);
+                    }
                 }, 1400);
             }
+            return;
         }
-    }
+
+        // 2. WAKE WORD DETECTION (When Idle in background)
+        for (let pattern of this.wakePatterns) {
+            if (pattern.test(active)) {
+                console.log(`[EchoVoice-Native] Wake word triggered: "${active}"`);
+                this.listenMode = 'command';
+                if (this.onStateChangeCallback) this.onStateChangeCallback('listening');
+                if (window.echoSounds) window.echoSounds.playWakeChime();
+
+                const remaining = active.replace(pattern, "").trim().replace(/^[,.]/, "").trim();
+                if (remaining.length > 2) {
+                    this.dispatchCommand(remaining);
+                } else {
+                    this.acknowledgeWake();
+                }
+                return;
+            }
+        }
 
     initVoices() {
         if (!this.synth) return;
@@ -203,46 +225,49 @@ class EchoVoiceEngine {
             const activeTranscript = (finalStr || interimStr).trim();
             if (!activeTranscript) return;
 
-            // 1. WAKE-WORD DETECTION PHASE (When Idle)
-            if (this.listenMode === 'wakeword') {
-                for (let pattern of this.wakePatterns) {
-                    if (pattern.test(activeTranscript)) {
-                        console.log(`[EchoVoice] Wake word detected: "${activeTranscript}"`);
-                        
-                        // Switch immediately to command capture mode
-                        this.listenMode = 'command';
-                        if (this.onStateChangeCallback) this.onStateChangeCallback('listening');
-                        if (window.echoSounds) window.echoSounds.playWakeChime();
-
-                        // Check if command was spoken in the same breath
-                        const remaining = activeTranscript.replace(pattern, "").trim().replace(/^[,.]/, "").trim();
-                        if (remaining.length > 2) {
-                            this.dispatchCommand(remaining);
-                        } else {
-                            // User just said "Hey Echo" -> acknowledge and listen for command
-                            this.acknowledgeWake();
-                        }
-                        return;
-                    }
-                }
-            } 
-            // 2. COMMAND CAPTURE PHASE
-            else if (this.listenMode === 'command') {
+            // 1. ALWAYS-LISTEN MODE OR COMMAND CAPTURE PHASE
+            if (this.alwaysListen || this.listenMode === 'command') {
                 if (this.onInterimCallback && activeTranscript) {
                     this.onInterimCallback(activeTranscript);
                 }
 
-                // If final sentence delivered, process it
                 if (finalStr) {
-                    this.dispatchCommand(finalStr.trim());
+                    let cleaned = finalStr.trim();
+                    for (let pattern of this.wakePatterns) {
+                        cleaned = cleaned.replace(pattern, "").trim();
+                    }
+                    this.dispatchCommand(cleaned || finalStr.trim());
                 } else {
-                    // Reset silence timeout
                     clearTimeout(this.silenceTimer);
                     this.silenceTimer = setTimeout(() => {
                         if (interimStr.trim()) {
-                            this.dispatchCommand(interimStr.trim());
+                            let cleaned = interimStr.trim();
+                            for (let pattern of this.wakePatterns) {
+                                cleaned = cleaned.replace(pattern, "").trim();
+                            }
+                            this.dispatchCommand(cleaned || interimStr.trim());
                         }
                     }, 1400);
+                }
+                return;
+            }
+
+            // 2. WAKE-WORD DETECTION PHASE (When Idle in background)
+            for (let pattern of this.wakePatterns) {
+                if (pattern.test(activeTranscript)) {
+                    console.log(`[EchoVoice] Wake word detected: "${activeTranscript}"`);
+                    
+                    this.listenMode = 'command';
+                    if (this.onStateChangeCallback) this.onStateChangeCallback('listening');
+                    if (window.echoSounds) window.echoSounds.playWakeChime();
+
+                    const remaining = activeTranscript.replace(pattern, "").trim().replace(/^[,.]/, "").trim();
+                    if (remaining.length > 2) {
+                        this.dispatchCommand(remaining);
+                    } else {
+                        this.acknowledgeWake();
+                    }
+                    return;
                 }
             }
         };

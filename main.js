@@ -141,22 +141,34 @@ function toggleWindow() {
 
 function setWindowMode(mode) {
     if (!mainWindow) return;
-    const primaryDisplay = screen.getPrimaryDisplay();
-    const { width, height } = primaryDisplay.workAreaSize;
+
+    // Detect the exact display where the window currently resides (Multi-monitor & High-DPI support)
+    const bounds = mainWindow.getBounds();
+    const activeDisplay = screen.getDisplayNearestPoint({
+        x: bounds.x + Math.round(bounds.width / 2),
+        y: bounds.y + Math.round(bounds.height / 2)
+    }) || screen.getPrimaryDisplay();
+
+    const { width: screenW, height: screenH, x: screenX, y: screenY } = activeDisplay.workArea;
 
     currentMode = mode;
     if (mode === 'island') {
-        const islandWidth = 480;
-        const islandHeight = 64;
-        const islandX = Math.round((width - islandWidth) / 2);
-        mainWindow.setAlwaysOnTop(true);
-        mainWindow.setBounds({ x: islandX, y: 16, width: islandWidth, height: islandHeight }, true);
+        const islandWidth = 490;
+        const islandHeight = 68;
+        const islandX = Math.round(screenX + (screenW - islandWidth) / 2);
+        const islandY = screenY + 12;
+
+        mainWindow.setAlwaysOnTop(true, 'screen-saver');
+        mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+        mainWindow.setBounds({ x: islandX, y: islandY, width: islandWidth, height: islandHeight }, true);
     } else {
-        const fullW = Math.min(1380, width - 60);
-        const fullH = Math.min(920, height - 60);
-        const fullX = Math.round((width - fullW) / 2);
-        const fullY = Math.round((height - fullH) / 2);
+        const fullW = Math.min(1380, screenW - 60);
+        const fullH = Math.min(920, screenH - 60);
+        const fullX = Math.round(screenX + (screenW - fullW) / 2);
+        const fullY = Math.round(screenY + (screenH - fullH) / 2);
+
         mainWindow.setAlwaysOnTop(false);
+        mainWindow.setVisibleOnAllWorkspaces(false);
         mainWindow.setBounds({ x: fullX, y: fullY, width: fullW, height: fullH }, true);
     }
 
@@ -589,22 +601,34 @@ function startVoiceBridge() {
                 res.end(`<!DOCTYPE html>
 <html>
 <head><title>Echo Voice Bridge</title></head>
-<body style="background:#09090e;color:#00e5ff;font-family:sans-serif;padding:24px;">
-  <h2>Echo Neural Speech Ear Active</h2>
-  <div id="status" style="color:#aaa;">Calibrating Windows Audio Subsystem...</div>
-  <div id="heard" style="margin-top:16px;font-size:20px;font-weight:bold;"></div>
+<body style="background:#09090e;color:#00e5ff;font-family:sans-serif;padding:16px;">
+  <div style="font-size:13px;font-weight:bold;color:#00e5ff;">ECHO NATIVE AUDIO EAR ENGINE</div>
+  <div id="status" style="color:#888;font-size:11px;margin-top:4px;">Connecting to Windows Speech API...</div>
+  <div id="heard" style="margin-top:10px;font-size:14px;color:#fff;word-break:break-word;"></div>
   <script>
     const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRec) {
-        document.getElementById('status').textContent = 'Web Speech unavailable in host binary.';
-    } else {
-        const rec = new SpeechRec();
+    let rec = null;
+    let isStarted = false;
+
+    function initSpeech() {
+        if (!SpeechRec) {
+            document.getElementById('status').textContent = 'Web Speech API unavailable.';
+            return;
+        }
+
+        rec = new SpeechRec();
         rec.continuous = true;
         rec.interimResults = true;
         rec.lang = 'en-US';
 
         rec.onstart = () => {
-            document.getElementById('status').textContent = 'EAR ONLINE: Continuously listening for "Hey Echo" and commands...';
+            isStarted = true;
+            document.getElementById('status').textContent = 'EAR ACTIVE & LISTENING (Zero Lag)';
+            fetch('/voice-status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ active: true, message: 'Windows Speech Ear Connected' })
+            }).catch(() => {});
         };
 
         rec.onresult = (e) => {
@@ -627,19 +651,52 @@ function startVoiceBridge() {
         };
 
         rec.onerror = (e) => {
-            document.getElementById('status').textContent = 'Speech status: ' + e.error;
-            setTimeout(() => { try { rec.start(); } catch(err){} }, 1000);
+            document.getElementById('status').textContent = 'Ear Status: ' + (e.error || 'reconnecting');
+            if (e.error !== 'no-speech') {
+                setTimeout(restart, 1000);
+            }
         };
 
         rec.onend = () => {
-            setTimeout(() => { try { rec.start(); } catch(err){} }, 500);
+            isStarted = false;
+            setTimeout(restart, 400);
         };
 
-        try { rec.start(); } catch(e){}
+        try { rec.start(); } catch(err){ setTimeout(restart, 1000); }
     }
+
+    function restart() {
+        if (rec) {
+            try { rec.abort(); } catch(e){}
+            try { rec.start(); } catch(e){}
+        }
+    }
+
+    // Keep-alive heartbeat every 5s
+    setInterval(() => {
+        if (!isStarted) restart();
+    }, 5000);
+
+    initSpeech();
   </script>
 </body>
 </html>`);
+                return;
+            }
+
+            if (req.url === '/voice-status' && req.method === 'POST') {
+                let body = '';
+                req.on('data', chunk => { body += chunk; });
+                req.on('end', () => {
+                    try {
+                        const data = JSON.parse(body);
+                        if (mainWindow && !mainWindow.isDestroyed()) {
+                            mainWindow.webContents.send('voice:status', data);
+                        }
+                    } catch (e) {}
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ ok: true }));
+                });
                 return;
             }
 
@@ -686,12 +743,22 @@ function launchVoiceEar(port) {
         return;
     }
 
+    const earProfileDir = path.join(app.getPath('temp'), 'echo_voice_ear_profile');
+    try {
+        if (!fs.existsSync(earProfileDir)) fs.mkdirSync(earProfileDir, { recursive: true });
+    } catch (e) {}
+
     const earArgs = [
         `--app=http://127.0.0.1:${port}/speech-bridge`,
-        '--window-size=1,1',
-        '--window-position=-3500,-3500',
+        `--user-data-dir=${earProfileDir}`,
+        '--window-size=240,160',
+        '--window-position=50,50',
+        '--minimized',
         '--use-fake-ui-for-media-stream',
         '--autoplay-policy=no-user-gesture-required',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding',
         '--disable-features=Translate',
         '--no-first-run',
         '--no-default-browser-check'
