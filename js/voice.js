@@ -376,7 +376,14 @@ class EchoVoiceEngine {
         const voices = this.cachedVoices.length > 0 ? this.cachedVoices : (this.synth ? this.synth.getVoices() : []);
         if (!voices || voices.length === 0) return null;
 
-        // 1. First priority: High-fidelity Online Neural voices (Windows 11 / Edge / Chrome)
+        // 0. User's explicitly chosen voice preference
+        const pref = localStorage.getItem("echo_system_voice");
+        if (pref && pref !== "auto") {
+            const chosen = voices.find(v => v.name.toLowerCase().includes(pref.toLowerCase()));
+            if (chosen) return chosen;
+        }
+
+        // 1. High-fidelity Online Neural voices (Windows 11 / Edge / Chrome)
         const topNeural = [
             "Microsoft Jenny Online (Natural) - English (United States)",
             "Microsoft Aria Online (Natural) - English (United States)",
@@ -411,72 +418,85 @@ class EchoVoiceEngine {
         this.stopSpeaking();
         if (!text || !text.trim()) return;
 
-        // 1. Cinema ElevenLabs Voice (If API key provided)
-        if (this.elevenLabsKey) {
-            try {
-                await this.speakElevenLabsWithRetry(text, emotion, onEnd);
-                return;
-            } catch (e) {
-                console.warn("ElevenLabs streaming error, engaging human neural browser voice:", e);
-            }
-        }
-
-        // 2. Ultra-Smooth Human Cadence Browser Speech
-        this.speakNaturalHuman(text, emotion, onEnd);
-    }
-
-    async speakElevenLabsWithRetry(text, emotion, onEnd, maxRetries = 2) {
-        let attempt = 0;
-        let lastError = null;
-
-        while (attempt < maxRetries) {
+        // 1. Cinema ElevenLabs High-Fidelity Voice (If Key Configured)
+        const cleanKey = (this.elevenLabsKey || "").trim().replace(/^["']|["']$/g, '');
+        if (cleanKey && cleanKey.length > 12) {
             try {
                 await this.speakElevenLabs(text, emotion, onEnd);
                 return;
-            } catch (err) {
-                attempt++;
-                lastError = err;
-                await new Promise(r => setTimeout(r, 400 * attempt));
+            } catch (e) {
+                console.warn("[EchoVoice] ElevenLabs streaming failed, switching to Natural Human System Voice:", e);
+                this.isSpeaking = false;
             }
         }
-        throw lastError;
+
+        // 2. High-Performance Natural Human Voice (Zero-Lag Built-in Speech)
+        this.speakNaturalHuman(text, emotion, onEnd);
+    }
+
+    async testElevenLabs(key, voiceId) {
+        const testKey = (key || this.elevenLabsKey || "").trim().replace(/^["']|["']$/g, '');
+        const testVoice = voiceId || this.elevenLabsVoiceId || "21m00Tcm4TlvDq8ikWAM";
+        if (!testKey) throw new Error("Please enter your ElevenLabs API Key.");
+
+        const oldKey = this.elevenLabsKey;
+        const oldVoice = this.elevenLabsVoiceId;
+        this.elevenLabsKey = testKey;
+        this.elevenLabsVoiceId = testVoice;
+
+        try {
+            await this.speakElevenLabs("Hello Alok. Cinema neural voice synthesizer is active.", "happy");
+            return { success: true, message: "Connected! Playing ElevenLabs high-fidelity audio." };
+        } catch (e) {
+            this.elevenLabsKey = oldKey;
+            this.elevenLabsVoiceId = oldVoice;
+            throw e;
+        }
     }
 
     async speakElevenLabs(text, emotion, onEnd) {
-        const url = `https://api.elevenlabs.io/v1/text-to-speech/${this.elevenLabsVoiceId}/stream`;
+        const cleanKey = (this.elevenLabsKey || "").trim().replace(/^["']|["']$/g, '');
+        const voiceId = this.elevenLabsVoiceId || "21m00Tcm4TlvDq8ikWAM";
+        const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`;
 
-        let stability = 0.52;
-        let similarity = 0.88;
-        if (emotion === "happy") stability = 0.45;
-        else if (emotion === "alert") stability = 0.68;
+        const cleanText = text
+            .replace(/\[(idle|happy|thinking|alert|speaking)\]/gi, "")
+            .replace(/[*_#`~>]/g, "")
+            .replace(/\s+/g, " ")
+            .trim();
+
+        let stability = 0.50;
+        let similarity = 0.85;
+        if (emotion === "happy") stability = 0.42;
+        else if (emotion === "alert") stability = 0.65;
 
         const res = await fetch(url, {
             method: "POST",
             headers: {
                 "Accept": "audio/mpeg",
                 "Content-Type": "application/json",
-                "xi-api-key": this.elevenLabsKey
+                "xi-api-key": cleanKey
             },
             body: JSON.stringify({
-                text: text,
-                model_id: "eleven_monolingual_v1",
+                text: cleanText,
+                model_id: "eleven_turbo_v2_5",
                 voice_settings: { stability, similarity_boost: similarity }
             })
         });
 
-        if (!res.ok) throw new Error(`ElevenLabs error: ${res.status}`);
+        if (!res.ok) {
+            const errData = await res.json().catch(() => null);
+            const msg = errData?.detail?.message || errData?.message || `HTTP ${res.status}`;
+            throw new Error(`ElevenLabs error: ${msg}`);
+        }
 
         const blob = await res.blob();
         const audioUrl = URL.createObjectURL(blob);
         const audio = new Audio(audioUrl);
         this.currentAudioEl = audio;
 
-        if (this.audioContext) {
-            try {
-                const source = this.audioContext.createMediaElementSource(audio);
-                source.connect(this.analyser);
-                source.connect(this.audioContext.destination);
-            } catch (e) {}
+        if (this.audioContext && this.audioContext.state === "suspended") {
+            try { await this.audioContext.resume(); } catch (e) {}
         }
 
         this.isSpeaking = true;
@@ -490,70 +510,81 @@ class EchoVoiceEngine {
             this.scheduleRestart();
         };
 
-        audio.play();
+        audio.onerror = () => {
+            this.isSpeaking = false;
+            URL.revokeObjectURL(audioUrl);
+            if (onEnd) onEnd();
+            if (this.onStateChangeCallback) this.onStateChangeCallback("idle");
+        };
+
+        await audio.play();
     }
 
     // Expressive Human Cadence with Micro-Intonation & Natural Breathing
     speakNaturalHuman(fullText, emotion = "idle", onEnd = null) {
-        if (!this.synth) return;
+        if (!this.synth) {
+            if (onEnd) onEnd();
+            return;
+        }
 
-        // Split text into human thought clauses at punctuation
-        const chunks = fullText.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [fullText];
+        // Clean out emotion tags [happy], markdown asterisks, hashes
+        const cleanText = fullText
+            .replace(/\[(idle|happy|thinking|alert|speaking)\]/gi, "")
+            .replace(/[*_#`~>]/g, "")
+            .replace(/\s+/g, " ")
+            .trim();
+
+        if (!cleanText) {
+            if (onEnd) onEnd();
+            return;
+        }
+
+        // Fix Chromium frozen synthesizer bug
+        try {
+            if (this.synth.paused) this.synth.resume();
+            this.synth.cancel();
+        } catch (e) {}
+
         const bestVoice = this.getBestNaturalVoice();
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        if (bestVoice) utterance.voice = bestVoice;
 
-        let chunkIndex = 0;
+        // Expressive prosody
+        if (emotion === "happy") {
+            utterance.pitch = 1.05;
+            utterance.rate = 1.02;
+        } else if (emotion === "alert") {
+            utterance.pitch = 1.08;
+            utterance.rate = 1.06;
+        } else if (emotion === "thinking") {
+            utterance.pitch = 0.98;
+            utterance.rate = 0.96;
+        } else {
+            utterance.pitch = 1.01;
+            utterance.rate = 1.0;
+        }
+
         this.isSpeaking = true;
         if (this.onStateChangeCallback) this.onStateChangeCallback("speaking");
+        this.activeUtterance = utterance; // Prevent garbage collection in Chromium
 
-        const speakNextChunk = () => {
-            if (chunkIndex >= chunks.length) {
-                this.isSpeaking = false;
-                if (onEnd) onEnd();
-                if (this.onStateChangeCallback) this.onStateChangeCallback("idle");
-                this.scheduleRestart();
-                return;
-            }
-
-            const chunk = chunks[chunkIndex].trim();
-            chunkIndex++;
-
-            if (!chunk) {
-                speakNextChunk();
-                return;
-            }
-
-            const utterance = new SpeechSynthesisUtterance(chunk);
-            if (bestVoice) utterance.voice = bestVoice;
-
-            // Human intonation & prosody
-            const isQuestion = chunk.endsWith("?");
-            if (emotion === "happy") {
-                utterance.pitch = isQuestion ? 1.08 : 1.04;
-                utterance.rate = 1.0;
-            } else if (emotion === "alert") {
-                utterance.pitch = 1.1;
-                utterance.rate = 1.06;
-            } else if (emotion === "thinking") {
-                utterance.pitch = 0.98;
-                utterance.rate = 0.95;
-            } else {
-                utterance.pitch = isQuestion ? 1.05 : 0.99;
-                utterance.rate = 0.98; // Relaxed confident conversational cadence
-            }
-
-            utterance.onend = () => {
-                // Natural 90ms human micro-pause between thought clauses
-                setTimeout(speakNextChunk, 90);
-            };
-
-            utterance.onerror = () => {
-                speakNextChunk();
-            };
-
-            this.synth.speak(utterance);
+        utterance.onend = () => {
+            this.isSpeaking = false;
+            this.activeUtterance = null;
+            if (onEnd) onEnd();
+            if (this.onStateChangeCallback) this.onStateChangeCallback("idle");
+            this.scheduleRestart();
         };
 
-        speakNextChunk();
+        utterance.onerror = (e) => {
+            console.warn("[EchoVoice] Synth error:", e);
+            this.isSpeaking = false;
+            this.activeUtterance = null;
+            if (onEnd) onEnd();
+            if (this.onStateChangeCallback) this.onStateChangeCallback("idle");
+        };
+
+        this.synth.speak(utterance);
     }
 
     getAudioLevel() {

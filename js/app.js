@@ -478,6 +478,54 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
 
+        // Auto-switch provider selector when user focuses or edits a key input
+        if (groqKeyInput && aiProviderSelect) {
+            groqKeyInput.addEventListener("focus", () => { aiProviderSelect.value = "groq"; });
+        }
+        if (apiKeyInput && aiProviderSelect) {
+            apiKeyInput.addEventListener("focus", () => { aiProviderSelect.value = "gemini"; });
+        }
+        if (openaiKeyInput && aiProviderSelect) {
+            openaiKeyInput.addEventListener("focus", () => { aiProviderSelect.value = "openai"; });
+        }
+
+        // Test Voice buttons
+        const btnTestVoice = document.getElementById("btnTestVoice");
+        const btnTestSystemVoice = document.getElementById("btnTestSystemVoice");
+        const systemVoiceSelect = document.getElementById("systemVoiceSelect");
+        const voiceTestFeedback = document.getElementById("voiceTestFeedback");
+
+        if (btnTestVoice && window.echoVoice) {
+            btnTestVoice.addEventListener("click", async () => {
+                const key = elevenKeyInput ? elevenKeyInput.value.trim() : "";
+                const vId = elevenVoiceSelect ? elevenVoiceSelect.value : "";
+                if (voiceTestFeedback) {
+                    voiceTestFeedback.textContent = "Connecting to ElevenLabs Cinema Voice...";
+                    voiceTestFeedback.style.color = "#00e5ff";
+                }
+                try {
+                    const res = await window.echoVoice.testElevenLabs(key, vId);
+                    if (voiceTestFeedback) {
+                        voiceTestFeedback.textContent = `🟢 ${res.message}`;
+                        voiceTestFeedback.style.color = "#10b981";
+                    }
+                } catch (e) {
+                    if (voiceTestFeedback) {
+                        voiceTestFeedback.textContent = `🔴 ${e.message}`;
+                        voiceTestFeedback.style.color = "#ef4444";
+                    }
+                }
+            });
+        }
+
+        if (btnTestSystemVoice && window.echoVoice) {
+            btnTestSystemVoice.addEventListener("click", () => {
+                const chosen = systemVoiceSelect ? systemVoiceSelect.value : "auto";
+                localStorage.setItem("echo_system_voice", chosen);
+                window.echoVoice.speakNaturalHuman("Echo system natural speech synthesizer is fully operational.", "happy");
+            });
+        }
+
         // Test AI Connection button
         if (btnTestAi) {
             btnTestAi.addEventListener("click", async () => {

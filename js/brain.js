@@ -769,11 +769,21 @@ Example: "[happy] I'm right here with you, Alok. All neural threads are running 
         // 10. UNIFIED MULTI-PROVIDER AI BRAIN QUERY
         // (Groq, Gemini, OpenAI, Ollama, Custom Endpoint)
         // ----------------------------------------------------
+        let aiError = null;
         try {
             const aiResponse = await this.queryAI(input, memory);
-            if (aiResponse) return aiResponse;
+            if (aiResponse && aiResponse.text) return aiResponse;
         } catch (err) {
             console.warn("[EchoBrain] Active AI provider error:", err);
+            aiError = err.message;
+        }
+
+        // If the user configured an active AI key and it threw an error, clearly explain it
+        if (aiError && (this.groqKey || this.geminiKey || this.openaiKey)) {
+            return {
+                emotion: "alert",
+                text: `${this.provider.toUpperCase()} API response: ${aiError}. Click the AI Pill in the top bar to update your key or model.`
+            };
         }
 
         // ----------------------------------------------------
@@ -807,7 +817,7 @@ Example: "[happy] I'm right here with you, Alok. All neural threads are running 
 
         return {
             emotion: "speaking",
-            text: `I hear you, ${userName}. To unlock unlimited general intelligence on any topic, add your free Groq or Gemini API key in Settings (Gear Icon) -> Brain & LLM!`
+            text: `I hear you, ${userName}. Connect your free Groq or Gemini key in Settings (Gear Icon) -> Brain & LLM for unlimited real-time intelligence!`
         };
     }
 
@@ -866,7 +876,7 @@ Example: "[happy] I'm right here with you, Alok. All neural threads are running 
 
     parseEmotionText(rawText) {
         let emotion = "speaking";
-        let cleaned = rawText.trim();
+        let cleaned = (rawText || "").trim();
         const match = cleaned.match(/\[(idle|happy|thinking|alert|speaking)\]/i);
         if (match) {
             emotion = match[1].toLowerCase();
@@ -875,71 +885,130 @@ Example: "[happy] I'm right here with you, Alok. All neural threads are running 
         return { emotion, text: cleaned };
     }
 
-    // 1. GROQ API (Lightning Fast Inference)
+    // 1. GROQ API (Lightning Fast Inference with auto-fallback models)
     async callGroq(userInput, memory) {
-        const messages = this.buildPrompt(userInput, memory);
-        const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${this.groqKey}`
-            },
-            body: JSON.stringify({
-                model: this.groqModel || "llama-3.3-70b-versatile",
-                messages: messages,
-                max_tokens: 150,
-                temperature: 0.8
-            })
-        });
+        const cleanKey = (this.groqKey || "").trim().replace(/^["']|["']$/g, '');
+        if (!cleanKey) throw new Error("Please enter your Groq API Key.");
 
-        if (!res.ok) throw new Error(`Groq API error: ${res.status}`);
-        const data = await res.json();
-        const content = data.choices?.[0]?.message?.content || "";
-        return this.parseEmotionText(content);
+        const messages = this.buildPrompt(userInput, memory);
+        const modelsToTry = [
+            this.groqModel || "llama-3.3-70b-versatile",
+            "llama-3.1-8b-instant",
+            "mixtral-8x7b-32768"
+        ];
+
+        let lastError = null;
+        for (const model of modelsToTry) {
+            try {
+                const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${cleanKey}`
+                    },
+                    body: JSON.stringify({
+                        model: model,
+                        messages: messages,
+                        max_tokens: 180,
+                        temperature: 0.8
+                    })
+                });
+
+                if (!res.ok) {
+                    const errJson = await res.json().catch(() => null);
+                    const msg = errJson?.error?.message || `HTTP ${res.status}`;
+                    if (res.status === 404) {
+                        lastError = new Error(`Model ${model} not available: ${msg}`);
+                        continue;
+                    }
+                    throw new Error(msg);
+                }
+
+                const data = await res.json();
+                const content = data.choices?.[0]?.message?.content || "";
+                return this.parseEmotionText(content);
+            } catch (err) {
+                lastError = err;
+                if (!err.message.includes("404")) throw err;
+            }
+        }
+        throw lastError;
     }
 
-    // 2. GOOGLE GEMINI API
+    // 2. GOOGLE GEMINI API (With gemini-1.5-flash fallback)
     async callGemini(userInput, memory) {
-        const key = this.geminiKey || this.apiKey;
-        const model = this.geminiModel || "gemini-2.0-flash";
+        const cleanKey = (this.geminiKey || this.apiKey || "").trim().replace(/^["']|["']$/g, '');
+        if (!cleanKey) throw new Error("Please enter your Google Gemini API Key.");
+
+        const modelsToTry = [
+            this.geminiModel || "gemini-1.5-flash",
+            "gemini-1.5-flash",
+            "gemini-2.0-flash"
+        ];
+
         const userName = memory ? memory.getUserName() : "Alok";
         const facts = memory ? memory.getFacts().join("; ") : "";
         const prompt = `${this.systemPrompt}\nUser Name: ${userName}\nFacts: ${facts}\nUser: ${userInput}`;
 
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
-        const res = await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: { maxOutputTokens: 140, temperature: 0.85 }
-            })
-        });
+        let lastError = null;
+        for (const model of modelsToTry) {
+            try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${cleanKey}`;
+                const res = await fetch(url, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }],
+                        generationConfig: { maxOutputTokens: 160, temperature: 0.85 }
+                    })
+                });
 
-        if (!res.ok) throw new Error(`Gemini API error: ${res.status}`);
-        const data = await res.json();
-        const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-        return this.parseEmotionText(content);
+                if (!res.ok) {
+                    const errJson = await res.json().catch(() => null);
+                    const msg = errJson?.error?.message || `HTTP ${res.status}`;
+                    if (res.status === 404) {
+                        lastError = new Error(`Model ${model} not found: ${msg}`);
+                        continue;
+                    }
+                    throw new Error(msg);
+                }
+
+                const data = await res.json();
+                const candidate = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                return this.parseEmotionText(candidate);
+            } catch (err) {
+                lastError = err;
+                if (!err.message.includes("404")) throw err;
+            }
+        }
+        throw lastError;
     }
 
     // 3. OPENAI API
     async callOpenAI(userInput, memory) {
+        const cleanKey = (this.openaiKey || "").trim().replace(/^["']|["']$/g, '');
+        if (!cleanKey) throw new Error("Please enter your OpenAI API Key.");
+
         const messages = this.buildPrompt(userInput, memory);
         const res = await fetch("https://api.openai.com/v1/chat/completions", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${this.openaiKey}`
+                "Authorization": `Bearer ${cleanKey}`
             },
             body: JSON.stringify({
                 model: this.openaiModel || "gpt-4o-mini",
                 messages: messages,
-                max_tokens: 150,
+                max_tokens: 160,
                 temperature: 0.8
             })
         });
 
-        if (!res.ok) throw new Error(`OpenAI API error: ${res.status}`);
+        if (!res.ok) {
+            const errJson = await res.json().catch(() => null);
+            throw new Error(errJson?.error?.message || `OpenAI error: HTTP ${res.status}`);
+        }
+
         const data = await res.json();
         const content = data.choices?.[0]?.message?.content || "";
         return this.parseEmotionText(content);
@@ -983,7 +1052,10 @@ Example: "[happy] I'm right here with you, Alok. All neural threads are running 
             })
         });
 
-        if (!res.ok) throw new Error(`Custom AI error: ${res.status}`);
+        if (!res.ok) {
+            const errJson = await res.json().catch(() => null);
+            throw new Error(errJson?.error?.message || `Custom AI error: ${res.status}`);
+        }
         const data = await res.json();
         const content = data.choices?.[0]?.message?.content || "";
         return this.parseEmotionText(content);

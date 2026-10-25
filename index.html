@@ -507,10 +507,31 @@
 
           <div class="settings-card" style="flex-direction: column; align-items: stretch; gap: 8px;">
             <div class="settings-card-info">
-              <span class="settings-card-title">ElevenLabs API Key (Optional)</span>
-              <span class="settings-card-desc">Leave empty to use Microsoft/Google natural system voices automatically.</span>
+              <span class="settings-card-title">ElevenLabs API Key (Cinema Quality Sexy Voice)</span>
+              <span class="settings-card-desc">Unlock human breaths, emotion & seductive prosody. Get a free key at <a href="https://elevenlabs.io" target="_blank" style="color: #00e5ff; text-decoration: underline;">elevenlabs.io</a>.</span>
             </div>
-            <input type="password" id="elevenKeyInput" class="modal-input" placeholder="Paste ElevenLabs key here...">
+            <div style="display: flex; gap: 8px;">
+              <input type="password" id="elevenKeyInput" class="modal-input" placeholder="xi_api_key..." style="flex: 1;">
+              <button class="hud-btn" id="btnTestVoice" style="padding: 6px 14px; font-size: 11px;">🎙️ Test Voice</button>
+            </div>
+            <div id="voiceTestFeedback" style="font-size: 11px; color: #888;">Leave empty to use Microsoft Natural System voices automatically.</div>
+          </div>
+
+          <div class="settings-card">
+            <div class="settings-card-info">
+              <span class="settings-card-title">Default System Voice</span>
+              <span class="settings-card-desc">Active offline speech synthesizer when ElevenLabs is not in use.</span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <select id="systemVoiceSelect" class="modal-input" style="max-width: 190px; font-size: 12px;">
+                <option value="auto">✨ Auto Best Natural Voice</option>
+                <option value="Jenny">Microsoft Jenny (Natural)</option>
+                <option value="Aria">Microsoft Aria (Natural)</option>
+                <option value="Guy">Microsoft Guy (Natural Male)</option>
+                <option value="Google">Google Natural English</option>
+              </select>
+              <button class="hud-btn" id="btnTestSystemVoice" style="padding: 6px 10px; font-size: 11px;" title="Test System Voice">🔊 Test</button>
+            </div>
           </div>
         </div>
 
